@@ -31,7 +31,11 @@ export interface FeeBreakdown {
   totalFee: string;
 }
 
-/** Used by the client to sign X402 authorization. */
+/**
+ * X402 payment requirements returned inside CreateIntentResponse.
+ * Note: `payTo`, `maxTimeoutSeconds`, and `extra` keys use camelCase per the
+ * X402 protocol spec, not the API's usual snake_case convention.
+ */
 export interface PaymentRequirements {
   scheme: string;
   network: string;
@@ -65,6 +69,9 @@ export interface CreateIntentResponse extends IntentBase {
 
 /** Response for POST /v2/intents/{intent_id}/execute (200). */
 export interface ExecuteIntentResponse extends IntentBase {}
+
+/** Response for POST /api/intents/{intent_id} (200) — alias for ExecuteIntentResponse. */
+export type SubmitProofResponse = ExecuteIntentResponse;
 
 /** Source-chain payment details from GetIntent. */
 export interface SourcePayment {

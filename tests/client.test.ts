@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   PayClient,
+  PublicPayClient,
   PayApiError,
   PayValidationError,
   IntentStatus,
@@ -10,6 +11,7 @@ import {
 import type {
   CreateIntentResponse,
   ExecuteIntentResponse,
+  SubmitProofResponse,
   GetIntentResponse,
 } from "../src/index.js";
 
@@ -549,5 +551,180 @@ describe("URL encoding", () => {
 
     const client = bearerClient(f);
     await client.getIntent("a&b");
+  });
+});
+
+// ── PublicPayClient ─────────────────────────────────────────────────────
+
+function publicClient(
+  fetchFn: typeof globalThis.fetch,
+): PublicPayClient {
+  return new PublicPayClient({
+    baseUrl: "http://localhost",
+    fetch: fetchFn,
+  });
+}
+
+describe("PublicPayClient constructor", () => {
+  it("throws on empty baseUrl", () => {
+    expect(
+      () => new PublicPayClient({ baseUrl: "" }),
+    ).toThrow(PayValidationError);
+  });
+
+  it("strips trailing slash from baseUrl", () => {
+    expect(
+      () => new PublicPayClient({ baseUrl: "http://localhost/" }),
+    ).not.toThrow();
+  });
+});
+
+describe("PublicPayClient createIntent", () => {
+  it("sends POST /api/intents with no auth headers and returns 201", async () => {
+    const responseBody = {
+      intent_id: "intent-public-1",
+      status: IntentStatus.AwaitingPayment,
+      payer_chain: "solana",
+    };
+
+    const f = mockFetch(201, responseBody, (url, init) => {
+      expect(url).toBe("http://localhost/api/intents");
+      expect(init.method).toBe("POST");
+      expect(init.headers).toHaveProperty("Content-Type", "application/json");
+      expect(init.headers).not.toHaveProperty("Authorization");
+      expect(init.headers).not.toHaveProperty("X-Client-ID");
+      expect(init.headers).not.toHaveProperty("X-API-Key");
+    });
+
+    const client = publicClient(f);
+    const resp = await client.createIntent({
+      email: "test@example.com",
+      amount: "10.00",
+      payerChain: "solana",
+    });
+
+    expect(resp.intentId).toBe("intent-public-1");
+    expect(resp.status).toBe(IntentStatus.AwaitingPayment);
+  });
+
+  it("throws PayApiError on non-201 response", async () => {
+    const f = mockFetch(400, { message: "invalid amount" });
+    const client = publicClient(f);
+
+    try {
+      await client.createIntent({
+        email: "a@b.com",
+        amount: "0",
+        payerChain: "solana",
+      });
+      expect.fail("should have thrown");
+    } catch (err) {
+      expect(err).toBeInstanceOf(PayApiError);
+      expect((err as PayApiError).statusCode).toBe(400);
+    }
+  });
+
+  it("throws PayValidationError for null request", async () => {
+    const client = publicClient(mockFetch(201, {}));
+    await expect(client.createIntent(null as any)).rejects.toThrow(
+      PayValidationError,
+    );
+  });
+
+  it("throws PayValidationError when both email and recipient are set", async () => {
+    const client = publicClient(mockFetch(201, {}));
+    await expect(
+      client.createIntent({
+        email: "a@b.com",
+        recipient: "0xabc",
+        amount: "10.00",
+        payerChain: "solana",
+      }),
+    ).rejects.toThrow(PayValidationError);
+  });
+
+  it("throws PayValidationError when amount is empty", async () => {
+    const client = publicClient(mockFetch(201, {}));
+    await expect(
+      client.createIntent({
+        email: "a@b.com",
+        amount: "",
+        payerChain: "solana",
+      }),
+    ).rejects.toThrow(PayValidationError);
+  });
+
+  it("throws PayValidationError when payerChain is empty", async () => {
+    const client = publicClient(mockFetch(201, {}));
+    await expect(
+      client.createIntent({
+        email: "a@b.com",
+        amount: "10.00",
+        payerChain: "",
+      }),
+    ).rejects.toThrow(PayValidationError);
+  });
+});
+
+describe("PublicPayClient submitProof", () => {
+  it("sends POST /api/intents/{id} with settle_proof body", async () => {
+    let sentBody: any;
+    const f: typeof globalThis.fetch = async (input, init) => {
+      expect(input).toBe("http://localhost/api/intents/xyz-789");
+      sentBody = JSON.parse(init!.body as string);
+      return new Response(
+        JSON.stringify({ intent_id: "xyz-789", status: IntentStatus.Pending }),
+        { status: 200, statusText: "OK" },
+      );
+    };
+
+    const client = publicClient(f);
+    const resp = await client.submitProof("xyz-789", "proof-base64-here");
+    expect(resp.status).toBe(IntentStatus.Pending);
+    expect(sentBody).toEqual({ settle_proof: "proof-base64-here" });
+  });
+
+  it("throws PayValidationError for empty intentId", async () => {
+    const client = publicClient(mockFetch(200, {}));
+    await expect(client.submitProof("", "proof")).rejects.toThrow(
+      PayValidationError,
+    );
+  });
+
+  it("throws PayValidationError for empty settleProof", async () => {
+    const client = publicClient(mockFetch(200, {}));
+    await expect(client.submitProof("intent-1", "")).rejects.toThrow(
+      PayValidationError,
+    );
+  });
+
+  it("URL-encodes special characters in intentId", async () => {
+    const f = mockFetch(200, { intent_id: "a/b", status: "PENDING" }, (url) => {
+      expect(url).toBe("http://localhost/api/intents/a%2Fb");
+    });
+
+    const client = publicClient(f);
+    await client.submitProof("a/b", "proof");
+  });
+});
+
+describe("PublicPayClient getIntent", () => {
+  it("sends GET /api/intents?intent_id=... and returns 200", async () => {
+    const f = mockFetch(
+      200,
+      { intent_id: "abc", status: IntentStatus.BaseSettled },
+      (url) => {
+        expect(url).toBe("http://localhost/api/intents?intent_id=abc");
+      },
+    );
+
+    const client = publicClient(f);
+    const resp = await client.getIntent("abc");
+    expect(resp.intentId).toBe("abc");
+  });
+
+  it("throws PayValidationError for empty intentId", async () => {
+    const client = publicClient(mockFetch(200, {}));
+    await expect(client.getIntent("")).rejects.toThrow(PayValidationError);
   });
 });

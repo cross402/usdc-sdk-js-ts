@@ -2,12 +2,14 @@ export { PayApiError, PayValidationError } from "./errors.js";
 
 export {
   PayClient,
+  PublicPayClient,
   keysToSnake,
   keysToCamel,
 } from "./client.js";
 
 export type {
   PayClientOptions,
+  PublicPayClientOptions,
   Auth,
   BearerAuth,
   ApiKeyAuth,
@@ -20,6 +22,7 @@ export type {
   CreateIntentRequest,
   CreateIntentResponse,
   ExecuteIntentResponse,
+  SubmitProofResponse,
   GetIntentResponse,
   IntentBase,
   FeeBreakdown,
