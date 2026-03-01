@@ -6,7 +6,7 @@
 
 Javascript & TypeScript client for the Agent Tech payment API — create intents, execute USDC transfers on Base, and query status.
 
-- **Zero runtime dependencies** — uses the built-in `fetch` API (Node 18+)
+- **Lightweight** — two small runtime deps for key conversion; uses built-in `fetch` (Node 18+)
 - **Dual ESM + CommonJS** — works in TypeScript and JavaScript projects
 - **Two clients** — `PayClient` (authenticated, server-side) and `PublicPayClient` (unauthenticated, payer-side)
 - **Two auth modes** for PayClient — Bearer token or header-based API key
@@ -41,7 +41,7 @@ npm install @agent-tech/pay
 import { PayClient, IntentStatus } from "@agent-tech/pay";
 
 const client = new PayClient({
-  baseUrl: "https://api-pay.agent.tech/api",
+  baseUrl: "https://api-pay.agent.tech",
   auth: { type: "bearer", clientId: "your-client-id", clientSecret: "your-client-secret" },
 });
 
@@ -68,7 +68,7 @@ console.log("Final status:", intent.status);
 const { PayClient } = require("@agent-tech/pay");
 
 const client = new PayClient({
-  baseUrl: "https://api-pay.agent.tech/api",
+  baseUrl: "https://api-pay.agent.tech",
   auth: { type: "bearer", clientId: "your-client-id", clientSecret: "your-client-secret" },
 });
 
@@ -90,7 +90,7 @@ git clone https://github.com/agent-tech/agent-sdk-js
 cd agent-sdk-js
 npm install
 
-PAY_BASE_URL=https://api-pay.agent.tech/api \
+PAY_BASE_URL=https://api-pay.agent.tech \
 PAY_CLIENT_ID=your-client-id \
 PAY_CLIENT_SECRET=your-client-secret \
 npx tsx examples/basic.ts
@@ -104,13 +104,13 @@ The SDK provides two client classes for different use cases.
 
 ### PayClient (Authenticated)
 
-Server-side client that uses `/v2` endpoints with authentication. The backend Agent wallet signs and executes transfers — no wallet or signing required on your side.
+Server-side client that uses `/api/v2` endpoints with authentication. The backend Agent wallet signs and executes transfers — no wallet or signing required on your side.
 
 ```ts
 import { PayClient } from "@agent-tech/pay";
 
 const client = new PayClient({
-  baseUrl: "https://api-pay.agent.tech/api",
+  baseUrl: "https://api-pay.agent.tech",
   auth: { type: "bearer", clientId: "id", clientSecret: "secret" },
 });
 
@@ -121,19 +121,21 @@ const status = await client.getIntent(intent.intentId);
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `createIntent(req)` | `POST /v2/intents` | Create a payment intent |
-| `executeIntent(id)` | `POST /v2/intents/{id}/execute` | Execute transfer on Base with Agent wallet |
-| `getIntent(id)` | `GET /v2/intents?intent_id=...` | Get intent status and receipt |
+| `createIntent(req)` | `POST /api/v2/intents` | Create a payment intent |
+| `executeIntent(id)` | `POST /api/v2/intents/{id}/execute` | Execute transfer on Base with Agent wallet |
+| `getIntent(id)` | `GET /api/v2/intents?intent_id=...` | Get intent status and receipt |
 
 ### PublicPayClient (Unauthenticated)
 
 Client-side / payer-side client that uses `/api` endpoints without authentication. Use this when the integrator holds the payer's wallet and can sign X402 payments and submit settle proofs directly.
 
+Both clients use the same `baseUrl` (API root without path prefix, e.g. `https://api-pay.agent.tech`).
+
 ```ts
 import { PublicPayClient } from "@agent-tech/pay";
 
 const client = new PublicPayClient({
-  baseUrl: "https://api-pay.agent.tech/api",
+  baseUrl: "https://api-pay.agent.tech",
 });
 
 const intent = await client.createIntent({ recipient: "0x...", amount: "10.00", payerChain: "base" });
@@ -189,13 +191,13 @@ const client = new PayClient({
 const publicClient = new PublicPayClient({ baseUrl, timeoutMs: 60_000 });
 ```
 
-Or provide a custom `fetch` implementation (timeout is ignored when custom fetch is provided):
+Or provide a custom `fetcher` implementation (timeout is ignored when custom fetcher is provided):
 
 ```ts
 const client = new PayClient({
   baseUrl,
   auth: { type: "bearer", clientId: "id", clientSecret: "secret" },
-  fetch: myCustomFetch,
+  fetcher: myCustomFetcher,
 });
 ```
 
@@ -205,9 +207,9 @@ const client = new PayClient({
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `createIntent` | `POST /v2/intents` | Create a payment intent |
-| `executeIntent` | `POST /v2/intents/{id}/execute` | Execute transfer on Base with Agent wallet |
-| `getIntent` | `GET /v2/intents?intent_id=...` | Get intent status and receipt |
+| `createIntent` | `POST /api/v2/intents` | Create a payment intent |
+| `executeIntent` | `POST /api/v2/intents/{id}/execute` | Execute transfer on Base with Agent wallet |
+| `getIntent` | `GET /api/v2/intents?intent_id=...` | Get intent status and receipt |
 
 ### PublicPayClient
 
@@ -285,8 +287,8 @@ Intents expire **10 minutes** after creation.
                           └────────┬─────────┘
                                    │
                       ┌────────────┼────────────┐
-                      │            │             │
-                      ▼            ▼             ▼
+                      │            │            │
+                      ▼            ▼            ▼
                ┌──────────┐ ┌──────────┐ ┌─────────────────────┐
                │ EXPIRED  │ │ PENDING  │ │ VERIFICATION_FAILED │
                └──────────┘ └────┬─────┘ └─────────────────────┘

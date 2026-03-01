@@ -100,10 +100,3 @@ export interface GetIntentResponse extends IntentBase {
   sourcePayment?: SourcePayment;
   basePayment?: BasePayment;
 }
-
-/** Common error body from the API (internal). */
-export interface ErrorResponse {
-  error: string;
-  message: string;
-  statusCode: number;
-}

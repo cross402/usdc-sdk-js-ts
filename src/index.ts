@@ -1,22 +1,12 @@
 export { PayApiError, PayValidationError } from "./errors.js";
 
-export {
-  PayClient,
-  PublicPayClient,
-  keysToSnake,
-  keysToCamel,
-} from "./client.js";
+export { PayClient, PublicPayClient } from "./client.js";
 
-export type {
-  PayClientOptions,
-  PublicPayClientOptions,
-  Auth,
-  BearerAuth,
-  ApiKeyAuth,
-  Fetcher,
-  FetchRequest,
-  FetchResponse,
-} from "./client.js";
+export type { PayClientOptions, PublicPayClientOptions } from "./client.js";
+
+export type { Auth, BearerAuth, ApiKeyAuth } from "./auth.js";
+
+export type { Fetcher, FetchRequest, FetchResponse } from "./http.js";
 
 export { IntentStatus } from "./types.js";
 

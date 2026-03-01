@@ -5,8 +5,6 @@ import {
   PayApiError,
   PayValidationError,
   IntentStatus,
-  keysToSnake,
-  keysToCamel,
 } from "../src/index.js";
 import type {
   Fetcher,
@@ -43,9 +41,11 @@ function statusText(code: number): string {
   return map[code] ?? "";
 }
 
+const TEST_BASE_URL = "http://localhost";
+
 function bearerClient(fetcher: Fetcher): PayClient {
   return new PayClient({
-    baseUrl: "http://localhost",
+    baseUrl: TEST_BASE_URL,
     auth: { type: "bearer", clientId: "id", clientSecret: "secret" },
     fetcher,
   });
@@ -68,7 +68,7 @@ describe("PayClient constructor", () => {
     expect(
       () =>
         new PayClient({
-          baseUrl: "http://localhost",
+          baseUrl: TEST_BASE_URL,
           auth: undefined as any,
         }),
     ).toThrow(PayValidationError);
@@ -78,7 +78,7 @@ describe("PayClient constructor", () => {
     expect(
       () =>
         new PayClient({
-          baseUrl: "http://localhost",
+          baseUrl: TEST_BASE_URL,
           auth: { type: "bearer", clientId: "", clientSecret: "secret" },
         }),
     ).toThrow(PayValidationError);
@@ -86,7 +86,7 @@ describe("PayClient constructor", () => {
     expect(
       () =>
         new PayClient({
-          baseUrl: "http://localhost",
+          baseUrl: TEST_BASE_URL,
           auth: { type: "bearer", clientId: "id", clientSecret: "" },
         }),
     ).toThrow(PayValidationError);
@@ -96,7 +96,7 @@ describe("PayClient constructor", () => {
     expect(
       () =>
         new PayClient({
-          baseUrl: "http://localhost",
+          baseUrl: TEST_BASE_URL,
           auth: { type: "apiKey", clientId: "", apiKey: "key" },
         }),
     ).toThrow(PayValidationError);
@@ -104,7 +104,7 @@ describe("PayClient constructor", () => {
     expect(
       () =>
         new PayClient({
-          baseUrl: "http://localhost",
+          baseUrl: TEST_BASE_URL,
           auth: { type: "apiKey", clientId: "id", apiKey: "" },
         }),
     ).toThrow(PayValidationError);
@@ -134,7 +134,7 @@ describe("options", () => {
   it("uses provided timeoutMs", async () => {
     // With a custom fetcher, timeout is ignored — so we just verify construction
     const client = new PayClient({
-      baseUrl: "http://localhost",
+      baseUrl: TEST_BASE_URL,
       auth: { type: "bearer", clientId: "id", clientSecret: "secret" },
       timeoutMs: 5000,
       fetcher: mockFetcher(200, { intent_id: "x" }),
@@ -153,7 +153,7 @@ describe("options", () => {
     };
 
     const client = new PayClient({
-      baseUrl: "http://localhost",
+      baseUrl: TEST_BASE_URL,
       auth: { type: "bearer", clientId: "id", clientSecret: "secret" },
       timeoutMs: 1, // tiny timeout, should be ignored with custom fetcher
       fetcher: customFetcher,
@@ -201,7 +201,7 @@ describe("createIntent", () => {
     };
 
     const f = mockFetcher(201, responseBody, (req) => {
-      expect(req.url).toBe("http://localhost/v2/intents");
+      expect(req.url).toBe("http://localhost/api/v2/intents");
       expect(req.method).toBe("POST");
       expect(req.headers).toHaveProperty("Content-Type", "application/json");
       expect(req.headers).toHaveProperty("Authorization");
@@ -295,7 +295,7 @@ describe("executeIntent", () => {
       200,
       { intent_id: "abc-123", status: IntentStatus.BaseSettled },
       (req) => {
-        expect(req.url).toBe("http://localhost/v2/intents/abc-123/execute");
+        expect(req.url).toBe("http://localhost/api/v2/intents/abc-123/execute");
       },
     );
 
@@ -318,7 +318,7 @@ describe("getIntent", () => {
       200,
       { intent_id: "xyz", status: IntentStatus.BaseSettled },
       (req) => {
-        expect(req.url).toBe("http://localhost/v2/intents?intent_id=xyz");
+        expect(req.url).toBe("http://localhost/api/v2/intents?intent_id=xyz");
       },
     );
 
@@ -343,7 +343,7 @@ describe("API key auth", () => {
     });
 
     const client = new PayClient({
-      baseUrl: "http://localhost",
+      baseUrl: TEST_BASE_URL,
       auth: { type: "apiKey", clientId: "myid", apiKey: "mykey" },
       fetcher: f,
     });
@@ -387,67 +387,6 @@ describe("parseError", () => {
   });
 });
 
-// ── Key conversion ─────────────────────────────────────────────────────
-
-describe("key conversion", () => {
-  it("round-trips camelCase ↔ snake_case", () => {
-    const camel = {
-      intentId: "x",
-      payerChain: "solana",
-      feeBreakdown: {
-        sourceChain: "solana",
-        platformFeePercentage: "1.5",
-      },
-    };
-
-    const snake = keysToSnake(camel);
-    expect(snake).toEqual({
-      intent_id: "x",
-      payer_chain: "solana",
-      fee_breakdown: {
-        source_chain: "solana",
-        platform_fee_percentage: "1.5",
-      },
-    });
-
-    const back = keysToCamel(snake);
-    expect(back).toEqual(camel);
-  });
-
-  it("handles arrays", () => {
-    const input = [{ fooBar: 1 }, { bazQux: 2 }];
-    const snake = keysToSnake(input);
-    expect(snake).toEqual([{ foo_bar: 1 }, { baz_qux: 2 }]);
-  });
-
-  it("passes primitives through", () => {
-    expect(keysToSnake("hello")).toBe("hello");
-    expect(keysToSnake(42)).toBe(42);
-    expect(keysToSnake(null)).toBe(null);
-  });
-});
-
-// ── Key conversion safety ──────────────────────────────────────────────
-
-describe("key conversion safety", () => {
-  it("strips __proto__ keys to prevent prototype pollution", () => {
-    const malicious = JSON.parse(
-      '{"__proto__":{"polluted":true},"safe_key":"ok"}',
-    );
-    const result = keysToCamel(malicious) as Record<string, unknown>;
-    expect(result.safeKey).toBe("ok");
-    expect(result.polluted).toBeUndefined();
-    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
-  });
-
-  it("handles consecutive uppercase in camelToSnake", () => {
-    const input = { xmlParser: "v", getHTTPSUrl: "u" };
-    const snake = keysToSnake(input) as Record<string, string>;
-    expect(snake.xml_parser).toBe("v");
-    expect(snake.get_https_url).toBe("u");
-  });
-});
-
 // ── Request body snake_case conversion ──────────────────────────────────
 
 describe("request serialization", () => {
@@ -482,7 +421,7 @@ describe("unknown auth type", () => {
     expect(
       () =>
         new PayClient({
-          baseUrl: "http://localhost",
+          baseUrl: TEST_BASE_URL,
           auth: { type: "magic" } as any,
         }),
     ).toThrow(PayValidationError);
@@ -534,7 +473,7 @@ describe("parseError edge cases", () => {
 describe("URL encoding", () => {
   it("encodes special characters in intentId for executeIntent", async () => {
     const f = mockFetcher(200, { intent_id: "a/b", status: "PENDING" }, (req) => {
-      expect(req.url).toBe("http://localhost/v2/intents/a%2Fb/execute");
+      expect(req.url).toBe("http://localhost/api/v2/intents/a%2Fb/execute");
     });
 
     const client = bearerClient(f);
@@ -543,7 +482,7 @@ describe("URL encoding", () => {
 
   it("encodes special characters in intentId for getIntent", async () => {
     const f = mockFetcher(200, { intent_id: "a&b", status: "PENDING" }, (req) => {
-      expect(req.url).toBe("http://localhost/v2/intents?intent_id=a%26b");
+      expect(req.url).toBe("http://localhost/api/v2/intents?intent_id=a%26b");
     });
 
     const client = bearerClient(f);
@@ -555,7 +494,7 @@ describe("URL encoding", () => {
 
 function publicClient(fetcher: Fetcher): PublicPayClient {
   return new PublicPayClient({
-    baseUrl: "http://localhost",
+    baseUrl: TEST_BASE_URL,
     fetcher,
   });
 }

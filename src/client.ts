@@ -1,58 +1,29 @@
-import camelcaseKeys from "camelcase-keys";
-import decamelizeKeys from "decamelize-keys";
-import { PayApiError, PayValidationError } from "./errors.js";
+import { PayValidationError } from "./errors.js";
+import { buildAuthHeaders } from "./auth.js";
+import type { Auth } from "./auth.js";
+import {
+  defaultFetcher,
+  doRequest,
+  parseError,
+  type Fetcher,
+} from "./http.js";
+import { keysToCamel } from "./utils.js";
 import type {
   CreateIntentRequest,
   CreateIntentResponse,
-  ErrorResponse,
   ExecuteIntentResponse,
   GetIntentResponse,
   SubmitProofResponse,
 } from "./types.js";
 
-const V2_PATH_PREFIX = "/v2";
+const V2_PATH_PREFIX = "/api/v2";
 const API_PATH_PREFIX = "/api";
 const DEFAULT_TIMEOUT_MS = 30_000;
 
-// ── Auth types ──────────────────────────────────────────────────────────
-
-export interface BearerAuth {
-  type: "bearer";
-  clientId: string;
-  clientSecret: string;
-}
-
-export interface ApiKeyAuth {
-  type: "apiKey";
-  clientId: string;
-  apiKey: string;
-}
-
-export type Auth = BearerAuth | ApiKeyAuth;
-
 // ── Client options ──────────────────────────────────────────────────────
 
-/** Generic HTTP request parameters (fetch-agnostic). */
-export interface FetchRequest {
-  url: string;
-  method: string;
-  headers: Record<string, string>;
-  body: string | undefined;
-  signal?: AbortSignal;
-}
-
-/** Generic HTTP response interface (fetch-agnostic). */
-export interface FetchResponse {
-  status: number;
-  statusText: string;
-  json(): Promise<unknown>;
-}
-
-/** Generic HTTP client. Accepts any implementation (fetch, axios, node-fetch, etc.). */
-export type Fetcher = (request: FetchRequest) => Promise<FetchResponse>;
-
 export interface PayClientOptions {
-  /** API root without /v2. */
+  /** API root URL without path prefix (e.g. https://api-pay.agent.tech). */
   baseUrl: string;
   /** Authentication credentials. */
   auth: Auth;
@@ -60,53 +31,6 @@ export interface PayClientOptions {
   timeoutMs?: number;
   /** Custom HTTP client (replaces the default global fetch). */
   fetcher?: Fetcher;
-}
-
-// ── Key conversion helpers ──────────────────────────────────────────────
-
-export function keysToSnake(obj: unknown): unknown {
-  if (obj === null || typeof obj !== "object") return obj;
-  return decamelizeKeys(obj as Record<string, unknown> | unknown[], {
-    deep: true,
-  });
-}
-
-export function keysToCamel(obj: unknown): unknown {
-  if (obj === null || typeof obj !== "object") return obj;
-  return camelcaseKeys(obj as Record<string, unknown> | unknown[], {
-    deep: true,
-  });
-}
-
-// ── Fetch adapter ─────────────────────────────────────────────────────────
-
-function defaultFetcher(): Fetcher {
-  return (req) =>
-    globalThis.fetch(req.url, {
-      method: req.method,
-      headers: req.headers,
-      body: req.body,
-      signal: req.signal,
-    }) as Promise<FetchResponse>;
-}
-
-// ── Shared error parser ──────────────────────────────────────────────────
-
-async function parseError(resp: FetchResponse): Promise<PayApiError> {
-  let msg: string | undefined;
-  try {
-    const raw = await resp.json();
-    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-      const body = raw as Partial<ErrorResponse>;
-      msg = body.message || body.error;
-    }
-  } catch {
-    // ignore JSON parse failures
-  }
-  if (!msg) {
-    msg = resp.statusText || `HTTP ${resp.status}`;
-  }
-  return new PayApiError(resp.status, msg);
 }
 
 // ── PayClient ───────────────────────────────────────────────────────────
@@ -123,109 +47,34 @@ export class PayClient {
       throw new PayValidationError("baseUrl is required");
     }
 
-    const { auth } = options;
-    if (!auth) {
-      throw new PayValidationError(
-        "an auth option is required (use bearer or apiKey auth)",
-      );
-    }
-
-    if (auth.type === "bearer") {
-      if (!auth.clientId || !auth.clientSecret) {
-        throw new PayValidationError(
-          "clientId and clientSecret must not be empty",
-        );
-      }
-      // NOTE: The upstream API expects base64-encoded credentials in a Bearer
-      // header. This is intentional and not standard HTTP Basic auth.
-      const token = Buffer.from(
-        `${auth.clientId}:${auth.clientSecret}`,
-      ).toString("base64");
-      this.authHeaders = { Authorization: `Bearer ${token}` };
-    } else if (auth.type === "apiKey") {
-      if (!auth.clientId || !auth.apiKey) {
-        throw new PayValidationError("clientId and apiKey must not be empty");
-      }
-      this.authHeaders = {
-        "X-Client-ID": auth.clientId,
-        "X-API-Key": auth.apiKey,
-      };
-    } else {
-      throw new PayValidationError(
-        "an auth option is required (use bearer or apiKey auth)",
-      );
-    }
-
+    this.authHeaders = buildAuthHeaders(options.auth);
     this.baseUrl = options.baseUrl.replace(/\/+$/, "");
     this.hasCustomFetch = typeof options.fetcher === "function";
     this.fetchFn = options.fetcher ?? defaultFetcher();
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 
-  // ── Internal helpers ────────────────────────────────────────────────
-
-  async #_do(
+  private async do(
     method: string,
     path: string,
     body?: unknown,
     signal?: AbortSignal,
-  ): Promise<FetchResponse> {
+  ) {
     const url = this.baseUrl + V2_PATH_PREFIX + path;
-
-    const headers: Record<string, string> = { ...this.authHeaders };
-    let reqBody: string | undefined;
-    if (body !== undefined) {
-      headers["Content-Type"] = "application/json";
-      reqBody = JSON.stringify(keysToSnake(body));
-    }
-
-    // Timeout handling: use AbortController when no custom fetch is provided.
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-    let fetchSignal = signal;
-    let onAbort: (() => void) | undefined;
-
-    if (!this.hasCustomFetch) {
-      const controller = new AbortController();
-      if (signal) {
-        if (signal.aborted) {
-          controller.abort(signal.reason);
-        } else {
-          onAbort = () => controller.abort(signal.reason);
-          signal.addEventListener("abort", onAbort, { once: true });
-        }
-      }
-      timeoutId = setTimeout(
-        () =>
-          controller.abort(
-            new Error(`request timed out after ${this.timeoutMs}ms`),
-          ),
-        this.timeoutMs,
-      );
-      fetchSignal = controller.signal;
-    }
-
-    try {
-      return await this.fetchFn({
-        url,
-        method,
-        headers,
-        body: reqBody,
-        signal: fetchSignal,
-      });
-    } finally {
-      if (timeoutId !== undefined) {
-        clearTimeout(timeoutId);
-      }
-      if (onAbort && signal) {
-        signal.removeEventListener("abort", onAbort);
-      }
-    }
+    return doRequest({
+      url,
+      method,
+      headers: this.authHeaders,
+      body,
+      signal,
+      fetcher: this.fetchFn,
+      timeoutMs: this.timeoutMs,
+      hasCustomFetch: this.hasCustomFetch,
+    });
   }
 
-  // ── Public API ──────────────────────────────────────────────────────
-
   /**
-   * Create a payment intent (POST /v2/intents).
+   * Create a payment intent (POST /api/v2/intents).
    * Exactly one of request.email or request.recipient must be set.
    */
   async createIntent(
@@ -248,7 +97,7 @@ export class PayClient {
     if (!request.payerChain) {
       throw new PayValidationError("'payerChain' is required");
     }
-    const resp = await this.#_do("POST", "/intents", request, signal);
+    const resp = await this.do("POST", "/intents", request, signal);
     if (resp.status !== 201) {
       throw await parseError(resp);
     }
@@ -257,7 +106,7 @@ export class PayClient {
 
   /**
    * Trigger transfer on Base using the Agent wallet
-   * (POST /v2/intents/{intent_id}/execute).
+   * (POST /api/v2/intents/{intent_id}/execute).
    */
   async executeIntent(
     intentId: string,
@@ -266,7 +115,7 @@ export class PayClient {
     if (!intentId) {
       throw new PayValidationError("intent_id is required");
     }
-    const resp = await this.#_do(
+    const resp = await this.do(
       "POST",
       `/intents/${encodeURIComponent(intentId)}/execute`,
       undefined,
@@ -279,7 +128,7 @@ export class PayClient {
   }
 
   /**
-   * Get intent status and receipt (GET /v2/intents?intent_id=...).
+   * Get intent status and receipt (GET /api/v2/intents?intent_id=...).
    */
   async getIntent(
     intentId: string,
@@ -288,7 +137,7 @@ export class PayClient {
     if (!intentId) {
       throw new PayValidationError("intent_id is required");
     }
-    const resp = await this.#_do(
+    const resp = await this.do(
       "GET",
       `/intents?intent_id=${encodeURIComponent(intentId)}`,
       undefined,
@@ -304,7 +153,7 @@ export class PayClient {
 // ── PublicPayClient ─────────────────────────────────────────────────────
 
 export interface PublicPayClientOptions {
-  /** API root without /api. */
+  /** API root URL without path prefix (e.g. https://api-pay.agent.tech). */
   baseUrl: string;
   /** Request timeout in milliseconds (default 30 000). Ignored if custom fetcher is provided. */
   timeoutMs?: number;
@@ -333,66 +182,24 @@ export class PublicPayClient {
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 
-  // ── Internal helpers ────────────────────────────────────────────────
-
   private async do(
     method: string,
     path: string,
     body?: unknown,
     signal?: AbortSignal,
-  ): Promise<FetchResponse> {
+  ) {
     const url = this.baseUrl + API_PATH_PREFIX + path;
-
-    const headers: Record<string, string> = {};
-    let reqBody: string | undefined;
-    if (body !== undefined) {
-      headers["Content-Type"] = "application/json";
-      reqBody = JSON.stringify(keysToSnake(body));
-    }
-
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-    let fetchSignal = signal;
-    let onAbort: (() => void) | undefined;
-
-    if (!this.hasCustomFetch) {
-      const controller = new AbortController();
-      if (signal) {
-        if (signal.aborted) {
-          controller.abort(signal.reason);
-        } else {
-          onAbort = () => controller.abort(signal.reason);
-          signal.addEventListener("abort", onAbort, { once: true });
-        }
-      }
-      timeoutId = setTimeout(
-        () =>
-          controller.abort(
-            new Error(`request timed out after ${this.timeoutMs}ms`),
-          ),
-        this.timeoutMs,
-      );
-      fetchSignal = controller.signal;
-    }
-
-    try {
-      return await this.fetchFn({
-        url,
-        method,
-        headers,
-        body: reqBody,
-        signal: fetchSignal,
-      });
-    } finally {
-      if (timeoutId !== undefined) {
-        clearTimeout(timeoutId);
-      }
-      if (onAbort && signal) {
-        signal.removeEventListener("abort", onAbort);
-      }
-    }
+    return doRequest({
+      url,
+      method,
+      headers: {},
+      body,
+      signal,
+      fetcher: this.fetchFn,
+      timeoutMs: this.timeoutMs,
+      hasCustomFetch: this.hasCustomFetch,
+    });
   }
-
-  // ── Public API ──────────────────────────────────────────────────────
 
   /**
    * Create a payment intent (POST /api/intents).

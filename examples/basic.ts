@@ -3,7 +3,7 @@
  *
  * Run from repo root:
  *
- *   PAY_BASE_URL=https://api-pay.agent.tech/api \
+ *   PAY_BASE_URL=https://api-pay.agent.tech \
  *   PAY_CLIENT_ID=id \
  *   PAY_CLIENT_SECRET=secret \
  *   npx tsx examples/basic.ts
