@@ -25,7 +25,11 @@
   "scripts": {
     "build": "bun build ./src/index.ts --outdir dist/esm --format esm --target node --packages external && bun build ./src/index.ts --outdir dist/cjs --format cjs --target node --packages external && tsc -p tsconfig.build.json && tsc -p tsconfig.build.cjs.json && node -e \"require('fs').writeFileSync('dist/cjs/package.json', JSON.stringify({type:'commonjs'}))\"",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "format": "biome format --write ./src",
+    "format:check": "biome format ./src",
+    "lint": "biome lint",
+    "check": "biome check"
   },
   "engines": {
     "node": ">=18"
@@ -36,6 +40,7 @@
   "license": "MIT",
   "sideEffects": false,
   "devDependencies": {
+    "@biomejs/biome": "^2.4.5",
     "@types/node": "^25.3.1",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
