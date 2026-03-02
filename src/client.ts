@@ -25,7 +25,7 @@ const DEFAULT_TIMEOUT_MS = 30_000;
 export interface PayClientOptions {
   /** API root URL without path prefix (e.g. https://api-pay.agent.tech). */
   baseUrl: string;
-  /** Authentication credentials. */
+  /** Auth credentials: { apiKey, secretKey } */
   auth: Auth;
   /** Request timeout in milliseconds (default 30 000). Ignored if custom fetcher is provided. */
   timeoutMs?: number;

@@ -9,7 +9,7 @@ Javascript & TypeScript client for the Agent Tech payment API — create intents
 - **Lightweight** — two small runtime deps for key conversion; uses built-in `fetch` (Node 18+)
 - **Dual ESM + CommonJS** — works in TypeScript and JavaScript projects
 - **Two clients** — `PayClient` (authenticated, server-side) and `PublicPayClient` (unauthenticated, payer-side)
-- **Two auth modes** for PayClient — Bearer token or header-based API key
+- **Bearer token authentication** for PayClient
 - **All payments settle on Base** chain
 
 ## Table of Contents
@@ -42,7 +42,7 @@ import { PayClient, IntentStatus } from "@agent-tech/pay";
 
 const client = new PayClient({
   baseUrl: "https://api-pay.agent.tech",
-  auth: { type: "bearer", clientId: "your-client-id", clientSecret: "your-client-secret" },
+  auth: { apiKey: "your-api-key", secretKey: "your-secret-key" },
 });
 
 // 1. Create intent
@@ -69,7 +69,7 @@ const { PayClient } = require("@agent-tech/pay");
 
 const client = new PayClient({
   baseUrl: "https://api-pay.agent.tech",
-  auth: { type: "bearer", clientId: "your-client-id", clientSecret: "your-client-secret" },
+  auth: { apiKey: "your-api-key", secretKey: "your-secret-key" },
 });
 
 async function main() {
@@ -91,8 +91,8 @@ cd agent-sdk-js
 npm install
 
 PAY_BASE_URL=https://api-pay.agent.tech \
-PAY_CLIENT_ID=your-client-id \
-PAY_CLIENT_SECRET=your-client-secret \
+PAY_API_KEY=your-api-key \
+PAY_SECRET_KEY=your-secret-key \
 npx tsx examples/basic.ts
 ```
 
@@ -111,7 +111,7 @@ import { PayClient } from "@agent-tech/pay";
 
 const client = new PayClient({
   baseUrl: "https://api-pay.agent.tech",
-  auth: { type: "bearer", clientId: "id", clientSecret: "secret" },
+  auth: { apiKey: "id", secretKey: "secret" },
 });
 
 const intent = await client.createIntent({ email: "merchant@example.com", amount: "10.00", payerChain: "solana" });
@@ -154,25 +154,14 @@ const status = await client.getIntent(intent.intentId);
 
 Authentication applies to `PayClient` only. `PublicPayClient` requires no credentials.
 
-### Bearer token (recommended)
+### Bearer token
 
-Base64-encodes `clientId:clientSecret` and sends it as `Authorization: Bearer <token>`.
-
-```ts
-const client = new PayClient({
-  baseUrl,
-  auth: { type: "bearer", clientId: "client-id", clientSecret: "client-secret" },
-});
-```
-
-### Header-based API key
-
-Sends `X-Client-ID` and `X-API-Key` headers.
+Base64-encodes `apiKey:secretKey` and sends it as `Authorization: Bearer <token>`.
 
 ```ts
 const client = new PayClient({
   baseUrl,
-  auth: { type: "apiKey", clientId: "client-id", apiKey: "api-key" },
+  auth: { apiKey: "api-key", secretKey: "secret-key" },
 });
 ```
 
@@ -183,7 +172,7 @@ The default timeout is **30 seconds** for both clients. Override with options:
 ```ts
 const client = new PayClient({
   baseUrl,
-  auth: { type: "bearer", clientId: "id", clientSecret: "secret" },
+  auth: { apiKey: "id", secretKey: "secret" },
   timeoutMs: 60_000,
 });
 
@@ -196,7 +185,7 @@ Or provide a custom `fetcher` implementation (timeout is ignored when custom fet
 ```ts
 const client = new PayClient({
   baseUrl,
-  auth: { type: "bearer", clientId: "id", clientSecret: "secret" },
+  auth: { apiKey: "id", secretKey: "secret" },
   fetcher: myCustomFetcher,
 });
 ```

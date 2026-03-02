@@ -46,7 +46,7 @@ const TEST_BASE_URL = "http://localhost";
 function bearerClient(fetcher: Fetcher): PayClient {
   return new PayClient({
     baseUrl: TEST_BASE_URL,
-    auth: { type: "bearer", clientId: "id", clientSecret: "secret" },
+    auth: { apiKey: "id", secretKey: "secret" },
     fetcher,
   });
 }
@@ -59,7 +59,7 @@ describe("PayClient constructor", () => {
       () =>
         new PayClient({
           baseUrl: "",
-          auth: { type: "bearer", clientId: "id", clientSecret: "secret" },
+          auth: { apiKey: "id", secretKey: "secret" },
         }),
     ).toThrow(PayValidationError);
   });
@@ -79,7 +79,7 @@ describe("PayClient constructor", () => {
       () =>
         new PayClient({
           baseUrl: TEST_BASE_URL,
-          auth: { type: "bearer", clientId: "", clientSecret: "secret" },
+          auth: { apiKey: "", secretKey: "secret" },
         }),
     ).toThrow(PayValidationError);
 
@@ -87,25 +87,7 @@ describe("PayClient constructor", () => {
       () =>
         new PayClient({
           baseUrl: TEST_BASE_URL,
-          auth: { type: "bearer", clientId: "id", clientSecret: "" },
-        }),
-    ).toThrow(PayValidationError);
-  });
-
-  it("throws on empty API key credentials", () => {
-    expect(
-      () =>
-        new PayClient({
-          baseUrl: TEST_BASE_URL,
-          auth: { type: "apiKey", clientId: "", apiKey: "key" },
-        }),
-    ).toThrow(PayValidationError);
-
-    expect(
-      () =>
-        new PayClient({
-          baseUrl: TEST_BASE_URL,
-          auth: { type: "apiKey", clientId: "id", apiKey: "" },
+          auth: { apiKey: "id", secretKey: "" },
         }),
     ).toThrow(PayValidationError);
   });
@@ -114,7 +96,7 @@ describe("PayClient constructor", () => {
     const f = mockFetcher(200, { intent_id: "x", status: "BASE_SETTLED" });
     const client = new PayClient({
       baseUrl: "http://localhost/",
-      auth: { type: "bearer", clientId: "id", clientSecret: "secret" },
+      auth: { apiKey: "id", secretKey: "secret" },
       fetcher: f,
     });
     // Verify by making a request and checking the URL
@@ -122,7 +104,7 @@ describe("PayClient constructor", () => {
       () =>
         new PayClient({
           baseUrl: "http://localhost/",
-          auth: { type: "bearer", clientId: "id", clientSecret: "secret" },
+          auth: { apiKey: "id", secretKey: "secret" },
         }),
     ).not.toThrow();
   });
@@ -135,7 +117,7 @@ describe("options", () => {
     // With a custom fetcher, timeout is ignored — so we just verify construction
     const client = new PayClient({
       baseUrl: TEST_BASE_URL,
-      auth: { type: "bearer", clientId: "id", clientSecret: "secret" },
+      auth: { apiKey: "id", secretKey: "secret" },
       timeoutMs: 5000,
       fetcher: mockFetcher(200, { intent_id: "x" }),
     });
@@ -154,7 +136,7 @@ describe("options", () => {
 
     const client = new PayClient({
       baseUrl: TEST_BASE_URL,
-      auth: { type: "bearer", clientId: "id", clientSecret: "secret" },
+      auth: { apiKey: "id", secretKey: "secret" },
       timeoutMs: 1, // tiny timeout, should be ignored with custom fetcher
       fetcher: customFetcher,
     });
@@ -330,25 +312,6 @@ describe("getIntent", () => {
   it("throws PayValidationError for empty intentId", async () => {
     const client = bearerClient(mockFetcher(200, {}));
     await expect(client.getIntent("")).rejects.toThrow(PayValidationError);
-  });
-});
-
-// ── API key auth headers ────────────────────────────────────────────────
-
-describe("API key auth", () => {
-  it("sends X-Client-ID and X-API-Key headers", async () => {
-    const f = mockFetcher(200, {}, (req) => {
-      expect(req.headers["X-Client-ID"]).toBe("myid");
-      expect(req.headers["X-API-Key"]).toBe("mykey");
-    });
-
-    const client = new PayClient({
-      baseUrl: TEST_BASE_URL,
-      auth: { type: "apiKey", clientId: "myid", apiKey: "mykey" },
-      fetcher: f,
-    });
-
-    await client.getIntent("test-id");
   });
 });
 

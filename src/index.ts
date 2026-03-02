@@ -4,7 +4,7 @@ export { PayClient, PublicPayClient } from "./client.js";
 
 export type { PayClientOptions, PublicPayClientOptions } from "./client.js";
 
-export type { Auth, BearerAuth, ApiKeyAuth } from "./auth.js";
+export type { Auth } from "./auth.js";
 
 export type { Fetcher, FetchRequest, FetchResponse } from "./http.js";
 
