@@ -60,6 +60,10 @@
   "publishConfig": {
     "access": "public"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agent-tech/AgentPay-SDK-JS-TS.git"
+  },
   "license": "MIT",
   "sideEffects": false,
   "devDependencies": {
