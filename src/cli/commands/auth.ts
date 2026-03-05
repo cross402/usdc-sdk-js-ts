@@ -5,6 +5,7 @@ import {
 	readConfig,
 	writeConfig,
 } from '../config.js';
+import { authSetSchema, parseOrExit } from '../schemas.js';
 
 function maskSecret(value: string): string {
 	if (!value || value.length < 8) {
@@ -27,18 +28,13 @@ export function registerAuthCommands(program: Command): void {
 		)
 		.action(
 			(opts: { apiKey?: string; secretKey?: string; baseUrl?: string }) => {
-				const apiKey = opts.apiKey ?? process.env.PAY_API_KEY;
-				const secretKey = opts.secretKey ?? process.env.PAY_SECRET_KEY;
-				const baseUrl = opts.baseUrl ?? process.env.PAY_BASE_URL;
-
-				if (!apiKey || !secretKey || !baseUrl) {
-					console.error(
-						'Error: apiKey, secretKey, and baseUrl are required. Use --api-key, --secret-key, --base-url or PAY_API_KEY, PAY_SECRET_KEY, PAY_BASE_URL env vars.',
-					);
-					process.exit(1);
-				}
-
-				writeConfig({ apiKey, secretKey, baseUrl });
+				const raw = {
+					apiKey: opts.apiKey ?? process.env.PAY_API_KEY ?? '',
+					secretKey: opts.secretKey ?? process.env.PAY_SECRET_KEY ?? '',
+					baseUrl: opts.baseUrl ?? process.env.PAY_BASE_URL ?? '',
+				};
+				const config = parseOrExit(authSetSchema, raw);
+				writeConfig(config);
 				console.log(`Config saved to ${getConfigPathForDisplay()}`);
 			},
 		);

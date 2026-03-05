@@ -1,12 +1,10 @@
 import type { Command } from 'commander';
+import { balanceReadSchema, parseOrExit } from '../schemas.js';
 
 const DEFAULT_BASE_RPC_URL = 'https://mainnet.base.org';
 
 /** USDC contract on Base mainnet. */
 const USDC_CONTRACT_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
-
-/** Ethereum address: 0x + 40 hex chars (case-insensitive). */
-const ETH_ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
 
 /** ERC20 balanceOf(address) selector. */
 const BALANCE_OF_SELECTOR = '0x70a08231';
@@ -85,23 +83,13 @@ export function registerBalanceCommands(program: Command): void {
 		)
 		.action(
 			async (opts: { address?: string; rpcUrl?: string }) => {
-				const addr = (opts.address ?? process.env.PAY_AGENT_ADDRESS ?? '').trim();
-				if (!addr) {
-					console.error(
-						'Error: --address or PAY_AGENT_ADDRESS is required.',
-					);
-					process.exit(1);
-				}
-				if (!ETH_ADDRESS_REGEX.test(addr)) {
-					console.error(
-						'Error: --address must be a valid Ethereum address (0x + 40 hex chars).',
-					);
-					process.exit(1);
-				}
-
-				const rpcUrl = (
-					opts.rpcUrl ?? process.env.PAY_BASE_RPC_URL ?? DEFAULT_BASE_RPC_URL
-				).replace(/\/+$/, '');
+				const raw = {
+					address: (opts.address ?? process.env.PAY_AGENT_ADDRESS ?? '').trim(),
+					rpcUrl: (
+						opts.rpcUrl ?? process.env.PAY_BASE_RPC_URL ?? DEFAULT_BASE_RPC_URL
+					).replace(/\/+$/, ''),
+				};
+				const { address: addr, rpcUrl } = parseOrExit(balanceReadSchema, raw);
 
 				try {
 					const { raw, usdc } = await fetchUsdcBalance(rpcUrl, addr);

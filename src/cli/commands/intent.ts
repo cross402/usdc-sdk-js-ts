@@ -3,6 +3,11 @@ import { PublicPayClient } from '../../browser.js';
 import { PayClient } from '../../server.js';
 import { readConfig } from '../config.js';
 import {
+	createIntentRequestSchema,
+	parseOrExit,
+	submitProofOptionsSchema,
+} from '../schemas.js';
+import {
 	getLatestActiveSession,
 	isSessionExpired,
 	listSessions,
@@ -82,32 +87,18 @@ export function registerIntentCommands(program: Command): void {
 				recipient?: string;
 			}) => {
 				const config = requireAuthConfig();
-				const amount = opts.amount ?? process.env.PAY_AMOUNT;
-				const payerChain = opts.payerChain ?? process.env.PAY_PAYER_CHAIN;
-				const email = opts.email ?? process.env.PAY_EMAIL;
-				const recipient = opts.recipient ?? process.env.PAY_RECIPIENT;
-
-				if (!amount || !payerChain) {
-					console.error('Error: --amount and --payer-chain are required.');
-					process.exit(1);
-				}
-				if (!!email === !!recipient) {
-					console.error(
-						'Error: Exactly one of --email or --recipient must be provided.',
-					);
-					process.exit(1);
-				}
+				const raw = {
+					amount: opts.amount ?? process.env.PAY_AMOUNT ?? '',
+					payerChain: opts.payerChain ?? process.env.PAY_PAYER_CHAIN ?? '',
+					email: opts.email ?? process.env.PAY_EMAIL ?? undefined,
+					recipient: opts.recipient ?? process.env.PAY_RECIPIENT ?? undefined,
+				};
+				const request = parseOrExit(createIntentRequestSchema, raw);
 
 				const client = new PayClient({
 					baseUrl: config.baseUrl,
 					auth: { apiKey: config.apiKey, secretKey: config.secretKey },
 				});
-
-				const request = {
-					amount,
-					payerChain,
-					...(email ? { email } : { recipient: recipient! }),
-				};
 
 				try {
 					const res = await client.createIntent(request);
@@ -205,25 +196,17 @@ export function registerIntentCommands(program: Command): void {
 				intentId: string | undefined,
 				opts: { proof?: string; baseUrl?: string },
 			) => {
-				const id = intentId ?? process.env.PAY_INTENT_ID;
-				if (!id) {
-					console.error('Error: intent-id is required.');
-					process.exit(1);
-				}
-
-				const proof = opts.proof ?? process.env.PAY_SETTLE_PROOF;
-				if (!proof) {
-					console.error('Error: --proof is required.');
-					process.exit(1);
-				}
-
-				const baseUrl = opts.baseUrl ?? getBaseUrlFromConfigOrEnv();
-				if (!baseUrl) {
-					console.error(
-						'Error: baseUrl required. Use --base-url or run: agent-pay auth set --base-url <url>',
-					);
-					process.exit(1);
-				}
+				const raw = {
+					intentId: (intentId ?? process.env.PAY_INTENT_ID ?? '').trim(),
+					proof: (opts.proof ?? process.env.PAY_SETTLE_PROOF ?? '').trim(),
+					baseUrl:
+						(opts.baseUrl ?? getBaseUrlFromConfigOrEnv() ?? '').trim() ||
+						'',
+				};
+				const { intentId: id, proof, baseUrl } = parseOrExit(
+					submitProofOptionsSchema,
+					raw,
+				);
 
 				const client = new PublicPayClient({ baseUrl });
 

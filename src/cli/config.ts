@@ -7,12 +7,10 @@ import {
 } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import type { CliConfig } from './schemas.js';
+import { cliConfigSchema } from './schemas.js';
 
-export interface CliConfig {
-	apiKey: string;
-	secretKey: string;
-	baseUrl: string;
-}
+export type { CliConfig };
 
 const DATA_DIRNAME = '.agent-tech-pay';
 const CONFIG_FILENAME = 'config.json';
@@ -41,11 +39,9 @@ export function readConfig(): CliConfig | null {
 	}
 	try {
 		const raw = readFileSync(path, 'utf-8');
-		const data = JSON.parse(raw) as CliConfig;
-		if (!data.apiKey || !data.secretKey || !data.baseUrl) {
-			return null;
-		}
-		return data;
+		const data = JSON.parse(raw) as unknown;
+		const result = cliConfigSchema.safeParse(data);
+		return result.success ? result.data : null;
 	} catch {
 		return null;
 	}
