@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/agent-tech/AgentPay-SDK-JS-TS/compare/pay-v0.1.3...pay-v0.1.4) (2026-03-05)
+
+
+### Code Refactoring
+
+* implement Zod schemas for configuration and command validation, enhancing input handling and error management across CLI commands ([0eec7fa](https://github.com/agent-tech/AgentPay-SDK-JS-TS/commit/0eec7fa98cd3a0830f4c4bdced66e6b9d44061fd))
+
 ## [0.1.3](https://github.com/agent-tech/AgentPay-SDK-JS-TS/compare/pay-v0.1.2...pay-v0.1.3) (2026-03-05)
 
 
