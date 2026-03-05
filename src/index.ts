@@ -1,6 +1,6 @@
 export type { Auth } from './auth.js';
 export type { PayClientOptions, PublicPayClientOptions } from './client.js';
-export { PayClient, PublicPayClient } from './client.js';
+export { PayClient, PublicPayClient, MIN_SEND_AMOUNT_USDC } from './client.js';
 export { PayApiError, PayValidationError } from './errors.js';
 
 export type { Fetcher, FetchRequest, FetchResponse } from './http.js';

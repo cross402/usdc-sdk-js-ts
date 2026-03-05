@@ -446,7 +446,7 @@ try {
 }
 ```
 
-**`PayValidationError`** — thrown when the SDK rejects a request before it reaches the API (e.g. missing request, empty intent ID):
+**`PayValidationError`** — thrown when the SDK rejects a request before it reaches the API. Input validation is implemented with [Zod](https://zod.dev); error messages follow the format `validation: <message>`.
 
 ```ts
 import { PayValidationError } from "@agent-tech/pay";
@@ -459,6 +459,16 @@ try {
   }
 }
 ```
+
+**When `PayValidationError` is thrown:**
+
+| Context | Rule |
+|---|---|
+| **Client constructor** | `baseUrl` is required and must not be empty |
+| **PayClient constructor** | `auth.apiKey` and `auth.secretKey` are required and must not be empty |
+| **createIntent** | `request` is required; exactly one of `email` or `recipient` must be provided; `amount` is required, must be a valid number, and ≥ 0.2 USDC; `payerChain` is required and must not be empty |
+| **executeIntent / getIntent** | `intentId` is required and must not be empty |
+| **submitProof** (PublicPayClient) | `intentId` and `settleProof` are required and must not be empty |
 
 | Status Code | Meaning |
 |---|---|

@@ -214,7 +214,7 @@ describe("createIntent", () => {
     try {
       await client.createIntent({
         email: "a@b.com",
-        amount: "0",
+        amount: "10.00",
         payerChain: "solana",
       });
       expect.fail("should have thrown");
@@ -257,6 +257,46 @@ describe("createIntent", () => {
         payerChain: "solana",
       }),
     ).rejects.toThrow(PayValidationError);
+  });
+
+  it("throws PayValidationError when amount is below 0.2 USDC", async () => {
+    const client = bearerClient(mockFetcher(201, {}));
+    await expect(
+      client.createIntent({
+        email: "a@b.com",
+        amount: "0.1",
+        payerChain: "solana",
+      }),
+    ).rejects.toThrow(PayValidationError);
+    await expect(
+      client.createIntent({
+        email: "a@b.com",
+        amount: "0.1",
+        payerChain: "solana",
+      }),
+    ).rejects.toThrow("0.2 USDC");
+  });
+
+  it("throws PayValidationError when amount is not a number", async () => {
+    const client = bearerClient(mockFetcher(201, {}));
+    await expect(
+      client.createIntent({
+        email: "a@b.com",
+        amount: "abc",
+        payerChain: "solana",
+      }),
+    ).rejects.toThrow(PayValidationError);
+  });
+
+  it("accepts amount equal to 0.2 USDC", async () => {
+    const client = bearerClient(mockFetcher(201, { intent_id: "ok" }));
+    await expect(
+      client.createIntent({
+        email: "a@b.com",
+        amount: "0.2",
+        payerChain: "solana",
+      }),
+    ).resolves.toBeDefined();
   });
 
   it("throws PayValidationError when payerChain is empty", async () => {
@@ -511,7 +551,7 @@ describe("PublicPayClient createIntent", () => {
     try {
       await client.createIntent({
         email: "a@b.com",
-        amount: "0",
+        amount: "10.00",
         payerChain: "solana",
       });
       expect.fail("should have thrown");
@@ -549,6 +589,17 @@ describe("PublicPayClient createIntent", () => {
         payerChain: "solana",
       }),
     ).rejects.toThrow(PayValidationError);
+  });
+
+  it("throws PayValidationError when amount is below 0.2 USDC", async () => {
+    const client = publicClient(mockFetcher(201, {}));
+    await expect(
+      client.createIntent({
+        email: "a@b.com",
+        amount: "0.1",
+        payerChain: "solana",
+      }),
+    ).rejects.toThrow("0.2 USDC");
   });
 
   it("throws PayValidationError when payerChain is empty", async () => {

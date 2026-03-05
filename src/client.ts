@@ -1,7 +1,14 @@
 import type { Auth } from './auth.js';
 import { buildAuthHeaders } from './auth.js';
-import { PayValidationError } from './errors.js';
 import { defaultFetcher, doRequest, type Fetcher, parseError } from './http.js';
+import {
+	createIntentRequestSchema,
+	intentIdSchema,
+	parseOrThrow,
+	payClientOptionsSchema,
+	publicPayClientOptionsSchema,
+	settleProofSchema,
+} from './schemas.js';
 import type {
 	CreateIntentRequest,
 	CreateIntentResponse,
@@ -14,6 +21,9 @@ import { keysToCamel } from './utils.js';
 const V2_PATH_PREFIX = '/api/v2';
 const API_PATH_PREFIX = '/api';
 const DEFAULT_TIMEOUT_MS = 30_000;
+
+/** Minimum send amount in USDC (inclusive). */
+export const MIN_SEND_AMOUNT_USDC = 0.2;
 
 // ── Client options ──────────────────────────────────────────────────────
 
@@ -38,15 +48,12 @@ export class PayClient {
 	private readonly hasCustomFetch: boolean;
 
 	constructor(options: PayClientOptions) {
-		if (!options.baseUrl) {
-			throw new PayValidationError('baseUrl is required');
-		}
-
-		this.authHeaders = buildAuthHeaders(options.auth);
-		this.baseUrl = options.baseUrl.replace(/\/+$/, '');
-		this.hasCustomFetch = typeof options.fetcher === 'function';
-		this.fetchFn = options.fetcher ?? defaultFetcher();
-		this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+		const opts = parseOrThrow(payClientOptionsSchema, options);
+		this.authHeaders = buildAuthHeaders(opts.auth);
+		this.baseUrl = opts.baseUrl.replace(/\/+$/, '');
+		this.hasCustomFetch = typeof opts.fetcher === 'function';
+		this.fetchFn = (opts.fetcher as Fetcher | undefined) ?? defaultFetcher();
+		this.timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 	}
 
 	private async do(
@@ -76,23 +83,8 @@ export class PayClient {
 		request: CreateIntentRequest,
 		signal?: AbortSignal,
 	): Promise<CreateIntentResponse> {
-		if (!request) {
-			throw new PayValidationError('CreateIntentRequest is required');
-		}
-		const hasEmail = !!request.email;
-		const hasRecipient = !!request.recipient;
-		if (hasEmail === hasRecipient) {
-			throw new PayValidationError(
-				"exactly one of 'email' or 'recipient' must be provided",
-			);
-		}
-		if (!request.amount) {
-			throw new PayValidationError("'amount' is required");
-		}
-		if (!request.payerChain) {
-			throw new PayValidationError("'payerChain' is required");
-		}
-		const resp = await this.do('POST', '/intents', request, signal);
+		const req = parseOrThrow(createIntentRequestSchema, request);
+		const resp = await this.do('POST', '/intents', req, signal);
 		if (resp.status !== 201) {
 			throw await parseError(resp);
 		}
@@ -107,12 +99,10 @@ export class PayClient {
 		intentId: string,
 		signal?: AbortSignal,
 	): Promise<ExecuteIntentResponse> {
-		if (!intentId) {
-			throw new PayValidationError('intent_id is required');
-		}
+		const id = parseOrThrow(intentIdSchema, intentId);
 		const resp = await this.do(
 			'POST',
-			`/intents/${encodeURIComponent(intentId)}/execute`,
+			`/intents/${encodeURIComponent(id)}/execute`,
 			undefined,
 			signal,
 		);
@@ -129,12 +119,10 @@ export class PayClient {
 		intentId: string,
 		signal?: AbortSignal,
 	): Promise<GetIntentResponse> {
-		if (!intentId) {
-			throw new PayValidationError('intent_id is required');
-		}
+		const id = parseOrThrow(intentIdSchema, intentId);
 		const resp = await this.do(
 			'GET',
-			`/intents?intent_id=${encodeURIComponent(intentId)}`,
+			`/intents?intent_id=${encodeURIComponent(id)}`,
 			undefined,
 			signal,
 		);
@@ -167,14 +155,11 @@ export class PublicPayClient {
 	private readonly hasCustomFetch: boolean;
 
 	constructor(options: PublicPayClientOptions) {
-		if (!options.baseUrl) {
-			throw new PayValidationError('baseUrl is required');
-		}
-
-		this.baseUrl = options.baseUrl.replace(/\/+$/, '');
-		this.hasCustomFetch = typeof options.fetcher === 'function';
-		this.fetchFn = options.fetcher ?? defaultFetcher();
-		this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+		const opts = parseOrThrow(publicPayClientOptionsSchema, options);
+		this.baseUrl = opts.baseUrl.replace(/\/+$/, '');
+		this.hasCustomFetch = typeof opts.fetcher === 'function';
+		this.fetchFn = (opts.fetcher as Fetcher | undefined) ?? defaultFetcher();
+		this.timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 	}
 
 	private async do(
@@ -204,23 +189,8 @@ export class PublicPayClient {
 		request: CreateIntentRequest,
 		signal?: AbortSignal,
 	): Promise<CreateIntentResponse> {
-		if (!request) {
-			throw new PayValidationError('CreateIntentRequest is required');
-		}
-		const hasEmail = !!request.email;
-		const hasRecipient = !!request.recipient;
-		if (hasEmail === hasRecipient) {
-			throw new PayValidationError(
-				"exactly one of 'email' or 'recipient' must be provided",
-			);
-		}
-		if (!request.amount) {
-			throw new PayValidationError("'amount' is required");
-		}
-		if (!request.payerChain) {
-			throw new PayValidationError("'payerChain' is required");
-		}
-		const resp = await this.do('POST', '/intents', request, signal);
+		const req = parseOrThrow(createIntentRequestSchema, request);
+		const resp = await this.do('POST', '/intents', req, signal);
 		if (resp.status !== 201) {
 			throw await parseError(resp);
 		}
@@ -236,16 +206,12 @@ export class PublicPayClient {
 		settleProof: string,
 		signal?: AbortSignal,
 	): Promise<SubmitProofResponse> {
-		if (!intentId) {
-			throw new PayValidationError('intent_id is required');
-		}
-		if (!settleProof) {
-			throw new PayValidationError('settle_proof is required');
-		}
+		const id = parseOrThrow(intentIdSchema, intentId);
+		const proof = parseOrThrow(settleProofSchema, settleProof);
 		const resp = await this.do(
 			'POST',
-			`/intents/${encodeURIComponent(intentId)}`,
-			{ settleProof },
+			`/intents/${encodeURIComponent(id)}`,
+			{ settleProof: proof },
 			signal,
 		);
 		if (resp.status !== 200) {
@@ -261,12 +227,10 @@ export class PublicPayClient {
 		intentId: string,
 		signal?: AbortSignal,
 	): Promise<GetIntentResponse> {
-		if (!intentId) {
-			throw new PayValidationError('intent_id is required');
-		}
+		const id = parseOrThrow(intentIdSchema, intentId);
 		const resp = await this.do(
 			'GET',
-			`/intents?intent_id=${encodeURIComponent(intentId)}`,
+			`/intents?intent_id=${encodeURIComponent(id)}`,
 			undefined,
 			signal,
 		);

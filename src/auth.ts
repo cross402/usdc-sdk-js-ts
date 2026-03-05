@@ -1,4 +1,4 @@
-import { PayValidationError } from './errors.js';
+import { authSchema, parseOrThrow } from './schemas.js';
 
 export interface Auth {
 	apiKey: string;
@@ -10,16 +10,10 @@ export interface Auth {
  * Throws PayValidationError if auth is invalid.
  */
 export function buildAuthHeaders(auth: Auth): Record<string, string> {
-	if (!auth) {
-		throw new PayValidationError('auth is required (apiKey and secretKey)');
-	}
-
-	if (!auth.apiKey || !auth.secretKey) {
-		throw new PayValidationError('apiKey and secretKey must not be empty');
-	}
+	const validated = parseOrThrow(authSchema, auth);
 	// NOTE: The upstream API expects base64-encoded credentials in a Bearer
 	// header. This is intentional and not standard HTTP Basic auth.
-	const token = Buffer.from(`${auth.apiKey}:${auth.secretKey}`).toString(
+	const token = Buffer.from(`${validated.apiKey}:${validated.secretKey}`).toString(
 		'base64',
 	);
 	return { Authorization: `Bearer ${token}` };
