@@ -39,7 +39,7 @@
     }
   },
   "bin": {
-    "agent-pay": "./dist/cli/index.js"
+    "agent-pay": "dist/cli/index.js"
   },
   "files": [
     "dist",
@@ -62,7 +62,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/agent-tech/AgentPay-SDK-JS-TS.git"
+    "url": "git+https://github.com/agent-tech/AgentPay-SDK-JS-TS.git"
   },
   "license": "MIT",
   "sideEffects": false,

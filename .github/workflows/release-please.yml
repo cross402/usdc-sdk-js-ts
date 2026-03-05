@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  id-token: write
 
 jobs:
   release-please:
@@ -58,4 +59,4 @@ jobs:
         run: bun run build
 
       - name: Publish to npm
-        run: npm publish --access public
+        run: npm publish
