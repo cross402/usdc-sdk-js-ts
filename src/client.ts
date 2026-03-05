@@ -18,7 +18,7 @@ import type {
 } from './types.js';
 import { keysToCamel } from './utils.js';
 
-const V2_PATH_PREFIX = '/api/v2';
+const V2_PATH_PREFIX = '/v2';
 const API_PATH_PREFIX = '/api';
 const DEFAULT_TIMEOUT_MS = 30_000;
 
