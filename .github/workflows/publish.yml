@@ -1,3 +1,7 @@
+# Note: This workflow triggers on manual GitHub releases only.
+# Release-please creates releases via GITHUB_TOKEN, which does NOT trigger
+# release:published (GitHub prevents workflow-to-workflow triggers).
+# npm publish is handled in release-please.yml when a release is created.
 name: Publish Package
 
 on:
