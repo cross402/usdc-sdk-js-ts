@@ -20,7 +20,7 @@ Guidance for AI coding agents working on the Agent Tech Pay SDK.
 
 ## CLI Config
 
-- **Path**: `~/.agent-tech-pay.json` (via `os.homedir()`)
+- **Path**: `~/.agent-tech-pay/config.json` (sessions in `~/.agent-tech-pay/sessions/`)
 - **Fields**: `apiKey`, `secretKey`, `baseUrl`
 - **Commands**: `auth set` writes config; `auth show` displays (secret masked); `auth clear` removes file
 
@@ -73,7 +73,7 @@ src/              # Source
   utils.ts        # key conversion
   cli/            # CLI
     index.ts      # Entry (shebang + commander)
-    config.ts     # ~/.agent-tech-pay.json read/write
+    config.ts     # ~/.agent-tech-pay/config.json read/write
     commands/
       auth.ts     # auth set / show / clear
       intent.ts   # intent create / execute / get / submit-proof

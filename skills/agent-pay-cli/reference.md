@@ -67,6 +67,8 @@ agent-pay intent create --amount <val> --payer-chain <chain> [--email <e> | --re
 Output: JSON. Extract `intentId` and pass as positional argument to `execute` and `get`.
 The CLI also stores the created intent as a local session.
 
+Env vars: `PAY_AMOUNT`, `PAY_PAYER_CHAIN`, `PAY_EMAIL`, `PAY_RECIPIENT`.
+
 ### intent execute
 
 ```bash
@@ -74,7 +76,7 @@ agent-pay intent execute [intent-id]
 ```
 
 Executes transfer on Base via the Agent backend wallet. No signing required from the caller.
-If `intent-id` is omitted, uses the latest active session.
+If `intent-id` is omitted, uses the latest active session or `PAY_INTENT_ID` env var.
 
 ### intent get
 
@@ -83,7 +85,7 @@ agent-pay intent get [intent-id]
 ```
 
 Returns intent status and receipt.
-If `intent-id` is omitted, uses the latest active session.
+If `intent-id` is omitted, uses the latest active session or `PAY_INTENT_ID` env var.
 
 ### intent sessions
 
@@ -119,4 +121,4 @@ All payments settle on Base. `--payer-chain` is the source chain only.
 
 - Missing config: Run `agent-pay auth set` first.
 - Missing required params: CLI exits with descriptive error message.
-- API errors: Message printed to stderr, exits with code 1.
+- Backend errors: Message printed to stderr, exits with code 1.
