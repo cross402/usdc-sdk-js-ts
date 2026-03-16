@@ -1,3 +1,37 @@
+/** Supported chain identifiers for use as `payerChain`. */
+export const Chain = {
+	/** Solana devnet (testnet). */
+	SolanaDevnet: 'solana-devnet',
+	/** Solana mainnet. */
+	SolanaMainnet: 'solana-mainnet-beta',
+	/** Base Sepolia (testnet). */
+	BaseSepolia: 'base-sepolia',
+	/** Base mainnet. */
+	Base: 'base',
+	/** BSC testnet. */
+	BscTestnet: 'bsc-testnet',
+	/** BSC mainnet. */
+	Bsc: 'bsc',
+	/** Polygon Amoy (testnet). */
+	PolygonAmoy: 'polygon-amoy',
+	/** Polygon mainnet. */
+	Polygon: 'polygon',
+	/** Arbitrum Sepolia (testnet). */
+	ArbitrumSepolia: 'arbitrum-sepolia',
+	/** Arbitrum mainnet. */
+	Arbitrum: 'arbitrum',
+	/** Ethereum Sepolia (testnet). */
+	EthereumSepolia: 'ethereum-sepolia',
+	/** Ethereum mainnet. */
+	Ethereum: 'ethereum',
+	/** Monad testnet. */
+	MonadTestnet: 'monad-testnet',
+	/** Monad mainnet. */
+	Monad: 'monad',
+} as const;
+
+export type ChainValue = (typeof Chain)[keyof typeof Chain];
+
 /** Intent status constants returned by the API. */
 export const IntentStatus = {
 	AwaitingPayment: 'AWAITING_PAYMENT',
@@ -18,7 +52,7 @@ export interface CreateIntentRequest {
 	email?: string;
 	recipient?: string;
 	amount: string;
-	payerChain: string;
+	payerChain: ChainValue | (string & {});
 }
 
 /** Fee details from the API. */

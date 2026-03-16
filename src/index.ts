@@ -6,6 +6,7 @@ export { PayApiError, PayValidationError } from './errors.js';
 export type { Fetcher, FetchRequest, FetchResponse } from './http.js';
 export type {
 	BasePayment,
+	ChainValue,
 	CreateIntentRequest,
 	CreateIntentResponse,
 	ExecuteIntentResponse,
@@ -17,4 +18,4 @@ export type {
 	SourcePayment,
 	SubmitProofResponse,
 } from './types.js';
-export { IntentStatus } from './types.js';
+export { Chain, IntentStatus } from './types.js';

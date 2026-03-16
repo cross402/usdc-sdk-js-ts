@@ -8,6 +8,7 @@ export { PublicPayClient } from './client.js';
 export { PayApiError, PayValidationError } from './errors.js';
 export type {
 	BasePayment,
+	ChainValue,
 	CreateIntentRequest,
 	CreateIntentResponse,
 	FeeBreakdown,
@@ -18,4 +19,4 @@ export type {
 	SourcePayment,
 	SubmitProofResponse,
 } from './types.js';
-export { IntentStatus } from './types.js';
+export { Chain, IntentStatus } from './types.js';
