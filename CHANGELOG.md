@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/agent-tech/AgentPay-SDK-JS-TS/compare/pay-v0.1.6...pay-v0.1.7) (2026-03-16)
+
+
+### Features
+
+* add Chain and ChainValue types for supported blockchain identifiers ([2576255](https://github.com/agent-tech/AgentPay-SDK-JS-TS/commit/2576255f561ce76d62ecfe83d02b2462457f3fde))
+
 ## [0.1.6](https://github.com/agent-tech/AgentPay-SDK-JS-TS/compare/pay-v0.1.5...pay-v0.1.6) (2026-03-05)
 
 
