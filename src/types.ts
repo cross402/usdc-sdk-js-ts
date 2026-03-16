@@ -6,6 +6,7 @@ export const IntentStatus = {
 	SourceSettled: 'SOURCE_SETTLED',
 	BaseSettling: 'BASE_SETTLING',
 	BaseSettled: 'BASE_SETTLED',
+	PartialSettlement: 'PARTIAL_SETTLEMENT',
 	Expired: 'EXPIRED',
 } as const;
 
