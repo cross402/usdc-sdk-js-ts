@@ -2,6 +2,7 @@
   "name": "@agenttech/pay",
   "version": "0.1.7",
   "description": "TypeScript client for the Agent Tech v2 payment API",
+  "author": "paul-agent <paul@agent.tech>",
   "type": "module",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
@@ -62,7 +63,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/agent-tech/AgentPay-SDK-JS-TS.git"
+    "url": "https://github.com/agent-tech/AgentPay-SDK-JS-TS"
   },
   "license": "MIT",
   "sideEffects": false,
