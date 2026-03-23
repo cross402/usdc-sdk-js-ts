@@ -10,8 +10,8 @@ import { registerResetCommand } from './commands/reset.js';
 const program = new Command();
 
 program
-	.name('agent-pay')
-	.description('CLI for Agent Tech Pay API')
+	.name('cross402-usdc')
+	.description('CLI for @cross402/usdc (Agent Tech payment API)')
 	.version(getVersion());
 
 registerAuthCommands(program);

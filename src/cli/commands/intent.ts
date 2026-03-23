@@ -29,7 +29,7 @@ function requireAuthConfig(): {
 	const config = readConfig();
 	if (!config) {
 		console.error(
-			'Error: No auth config. Run: agent-pay auth set --api-key <key> --secret-key <key> --base-url <url>',
+			'Error: No auth config. Run: cross402-usdc auth set --api-key <key> --secret-key <key> --base-url <url>',
 		);
 		process.exit(1);
 	}
@@ -47,7 +47,7 @@ function resolveIntentId(positional?: string): {
 	const session = getLatestActiveSession();
 	if (!session) {
 		console.error(
-			'Error: intent-id is required (no active session found). Provide [intent-id] or set PAY_INTENT_ID, or run: agent-pay intent create ...',
+			'Error: intent-id is required (no active session found). Provide [intent-id] or set PAY_INTENT_ID, or run: cross402-usdc intent create ...',
 		);
 		process.exit(1);
 	}

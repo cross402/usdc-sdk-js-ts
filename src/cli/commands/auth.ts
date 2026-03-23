@@ -46,7 +46,7 @@ export function registerAuthCommands(program: Command): void {
 			const config = readConfig();
 			if (!config) {
 				console.log(
-					'No config found. Run: agent-pay auth set --api-key <key> --secret-key <key> --base-url <url>',
+					'No config found. Run: cross402-usdc auth set --api-key <key> --secret-key <key> --base-url <url>',
 				);
 				return;
 			}
@@ -63,11 +63,11 @@ export function registerAuthCommands(program: Command): void {
 			const removed = clearConfig();
 			if (removed) {
 				console.log(
-					"Config cleared. Sessions preserved. Use 'agent-pay reset' to remove all data.",
+					"Config cleared. Sessions preserved. Use 'cross402-usdc reset' to remove all data.",
 				);
 			} else {
 				console.log(
-					"No config found. Sessions preserved. Use 'agent-pay reset' to remove all data.",
+					"No config found. Sessions preserved. Use 'cross402-usdc reset' to remove all data.",
 				);
 			}
 		});

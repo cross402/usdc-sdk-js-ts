@@ -1,5 +1,5 @@
 {
-  "name": "@agenttech/pay",
+  "name": "@cross402/usdc",
   "version": "0.1.7",
   "description": "TypeScript client for the Agent Tech v2 payment API",
   "author": "paul-agent <paul@agent.tech>",
@@ -40,7 +40,7 @@
     }
   },
   "bin": {
-    "agent-pay": "dist/cli/index.js"
+    "cross402-usdc": "dist/cli/index.js"
   },
   "files": [
     "dist",

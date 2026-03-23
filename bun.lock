@@ -3,7 +3,7 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "@agenttech/pay",
+      "name": "@cross402/usdc",
       "dependencies": {
         "@types/bun": "^1.3.9",
         "camelcase-keys": "^10.0.2",

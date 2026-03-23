@@ -12,7 +12,7 @@ import { cliConfigSchema } from './schemas.js';
 
 export type { CliConfig };
 
-const DATA_DIRNAME = '.agent-tech-pay';
+const DATA_DIRNAME = '.cross402-usdc';
 const CONFIG_FILENAME = 'config.json';
 const SESSIONS_DIRNAME = 'sessions';
 

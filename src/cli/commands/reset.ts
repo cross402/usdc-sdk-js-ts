@@ -9,7 +9,7 @@ async function confirmReset(): Promise<boolean> {
 	const rl = createInterface({ input, output });
 	try {
 		const answer = await rl.question(
-			'This will remove all agent-pay data (config + sessions). Continue? (y/N) ',
+			'This will remove all cross402-usdc data (config + sessions). Continue? (y/N) ',
 		);
 		const normalized = answer.trim().toLowerCase();
 		return normalized === 'y' || normalized === 'yes';

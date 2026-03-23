@@ -1,24 +1,24 @@
-# agent-pay CLI Reference
+# cross402-usdc CLI Reference
 
 ## Installation
 
 ```bash
-npm install -g @agenttech/pay
+npm install -g @cross402/usdc
 # or use via npx without installing
 ```
 
 ## Config file
 
-- **Path**: `~/.agent-tech-pay/config.json`
+- **Path**: `~/.cross402-usdc/config.json`
 - **Fields**: `apiKey`, `secretKey`, `baseUrl`
-- **Sessions**: stored under `~/.agent-tech-pay/sessions/<intentId>.json`
+- **Sessions**: stored under `~/.cross402-usdc/sessions/<intentId>.json`
 
 ## Auth commands
 
 ### auth set
 
 ```bash
-agent-pay auth set --api-key <key> --secret-key <key> --base-url <url>
+cross402-usdc auth set --api-key <key> --secret-key <key> --base-url <url>
 ```
 
 All three required. Use flags or env vars: `PAY_API_KEY`, `PAY_SECRET_KEY`, `PAY_BASE_URL`.
@@ -29,12 +29,12 @@ Shows current config. Secret key is masked (first 4 + last 4 chars visible).
 
 ### auth clear
 
-Removes `~/.agent-tech-pay/config.json` (sessions preserved).
+Removes `~/.cross402-usdc/config.json` (sessions preserved).
 
 ### balance read
 
 ```bash
-agent-pay balance read --address <0x...> [--rpc-url <url>]
+cross402-usdc balance read --address <0x...> [--rpc-url <url>]
 ```
 
 Reads USDC balance of an address on Base mainnet. Uses USDC contract `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` and RPC `https://mainnet.base.org` by default.
@@ -47,7 +47,7 @@ Output: JSON with `address`, `usdcContract`, `rpcUrl`, `balanceRaw`, `balanceUsd
 ### reset
 
 ```bash
-agent-pay reset [--yes]
+cross402-usdc reset [--yes]
 ```
 
 Removes **all** stored config and sessions.
@@ -57,7 +57,7 @@ Removes **all** stored config and sessions.
 ### intent create
 
 ```bash
-agent-pay intent create --amount <val> --payer-chain <chain> [--email <e> | --recipient <r>]
+cross402-usdc intent create --amount <val> --payer-chain <chain> [--email <e> | --recipient <r>]
 ```
 
 - `--amount` — e.g. `10.00`
@@ -72,7 +72,7 @@ Env vars: `PAY_AMOUNT`, `PAY_PAYER_CHAIN`, `PAY_EMAIL`, `PAY_RECIPIENT`.
 ### intent execute
 
 ```bash
-agent-pay intent execute [intent-id]
+cross402-usdc intent execute [intent-id]
 ```
 
 Executes transfer on Base via the Agent backend wallet. No signing required from the caller.
@@ -81,7 +81,7 @@ If `intent-id` is omitted, uses the latest active session or `PAY_INTENT_ID` env
 ### intent get
 
 ```bash
-agent-pay intent get [intent-id]
+cross402-usdc intent get [intent-id]
 ```
 
 Returns intent status and receipt.
@@ -90,7 +90,7 @@ If `intent-id` is omitted, uses the latest active session or `PAY_INTENT_ID` env
 ### intent sessions
 
 ```bash
-agent-pay intent sessions [--expired]
+cross402-usdc intent sessions [--expired]
 ```
 
 Lists stored sessions. Use `--expired` to show only expired intents.
@@ -100,7 +100,7 @@ Lists stored sessions. Use `--expired` to show only expired intents.
 ### intent submit-proof
 
 ```bash
-agent-pay intent submit-proof <intent-id> --proof <settle-proof> [--base-url <url>]
+cross402-usdc intent submit-proof <intent-id> --proof <settle-proof> [--base-url <url>]
 ```
 
 Used when the **payer holds their own wallet** and has already signed an X402 payment off-chain.
@@ -119,6 +119,6 @@ All payments settle on Base. `--payer-chain` is the source chain only.
 
 ## Error handling
 
-- Missing config: Run `agent-pay auth set` first.
+- Missing config: Run `cross402-usdc auth set` first.
 - Missing required params: CLI exits with descriptive error message.
 - Backend errors: Message printed to stderr, exits with code 1.

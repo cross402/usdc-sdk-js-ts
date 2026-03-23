@@ -1,23 +1,23 @@
 ---
-name: agent-pay-cli
-description: Manages auth credentials and payment intent operations via agent-pay CLI. Use when: (1) Setting up or managing auth for Agent Tech Pay, (2) Creating/executing payment intents (server-side Flow A), (3) Submitting settle proofs (payer-side Flow B), (4) Reading balance, sessions, or intent status. Keywords: agent-pay, payment intents, auth set, intent create, intent execute, submit-proof, balance read.
+name: cross402-usdc-cli
+description: Manages auth credentials and payment intent operations via cross402-usdc CLI. Use when: (1) Setting up or managing auth for Agent Tech Pay / @cross402/usdc, (2) Creating/executing payment intents (server-side Flow A), (3) Submitting settle proofs (payer-side Flow B), (4) Reading balance, sessions, or intent status. Keywords: cross402-usdc, payment intents, auth set, intent create, intent execute, submit-proof, balance read.
 ---
 
-# agent-pay CLI
+# cross402-usdc CLI
 
-CLI for Agent Tech Pay — auth management and payment intent operations.
+CLI for @cross402/usdc — auth management and payment intent operations.
 
 ## How to run
 
 ```bash
-npx @agenttech/pay <command>
+npx @cross402/usdc <command>
 # or, if installed globally:
-agent-pay <command>
+cross402-usdc <command>
 ```
 
 ## Auth commands
 
-Config is stored at `~/.agent-tech-pay/config.json` (sessions in `~/.agent-tech-pay/sessions/`).
+Config is stored at `~/.cross402-usdc/config.json` (sessions in `~/.cross402-usdc/sessions/`).
 
 | Command | Description |
 |---------|-------------|
@@ -32,7 +32,7 @@ Config is stored at `~/.agent-tech-pay/config.json` (sessions in `~/.agent-tech-
 **Example:**
 
 ```bash
-agent-pay auth set --api-key my-key --secret-key my-secret --base-url https://api-pay.agent.tech
+cross402-usdc auth set --api-key my-key --secret-key my-secret --base-url https://api-pay.agent.tech
 ```
 
 ## Two separate payment flows
@@ -41,7 +41,7 @@ There are two independent flows. Do not mix them.
 
 **Before intent operations, ask:**
 - **Flow**: Server-side (Agent wallet signs) or payer-side (payer signs X402)?
-- **Auth**: For Flow A, do I have `agent-pay auth set` configured?
+- **Auth**: For Flow A, do I have `cross402-usdc auth set` configured?
 - **Chain**: Which `--payer-chain`? (`solana` or `base` — source only; all settle on Base)
 
 | Scenario | Flow | Primary command |
@@ -89,7 +89,7 @@ The payer holds their own wallet and signs an X402 payment off-chain. Only `subm
 - **NEVER** call `submit-proof` after `execute` — they are different flows; mixing causes confusion and incorrect state.
 - **NEVER** pass both `--email` and `--recipient` to `intent create` — exactly one is required; both causes validation error.
 - **NEVER** assume `execute`/`get` without `intent-id` uses a specific session — it uses the latest active session or `PAY_INTENT_ID`; if none exists, CLI exits with error.
-- **NEVER** run Flow A commands without auth — run `agent-pay auth set` first; missing config exits with code 1.
+- **NEVER** run Flow A commands without auth — run `cross402-usdc auth set` first; missing config exits with code 1.
 - **NEVER** use `auth set` secret key for Flow B — payer signs off-chain; only `baseUrl` is needed; exposing secret is a security risk.
 - **NEVER** assume `intent create` alone completes payment — you must call `intent execute` afterward; create only reserves the intent.
 
@@ -98,48 +98,48 @@ The payer holds their own wallet and signs an X402 payment off-chain. Only `subm
 **Setup (do once)**
 
 ```bash
-agent-pay auth set --api-key <key> --secret-key <key> --base-url https://api-pay.agent.tech
+cross402-usdc auth set --api-key <key> --secret-key <key> --base-url https://api-pay.agent.tech
 ```
 
 **Flow A: Create and execute intent**
 
 ```bash
 # 1. Create — captures intentId from JSON output
-agent-pay intent create --amount 10.00 --payer-chain solana --email merchant@example.com
+cross402-usdc intent create --amount 10.00 --payer-chain solana --email merchant@example.com
 
 # 2. Execute using intentId from step 1
-agent-pay intent execute <intent-id>
+cross402-usdc intent execute <intent-id>
 
 # 3. Query status
-agent-pay intent get <intent-id>
+cross402-usdc intent get <intent-id>
 ```
 
 **List sessions**
 
 ```bash
-agent-pay intent sessions
-agent-pay intent sessions --expired
+cross402-usdc intent sessions
+cross402-usdc intent sessions --expired
 ```
 
 **Reset all stored data**
 
 ```bash
-agent-pay reset
-agent-pay reset --yes
+cross402-usdc reset
+cross402-usdc reset --yes
 ```
 
 **Flow B: Submit settle proof**
 
 ```bash
 # Payer has already signed X402 payment off-chain and obtained settle proof
-agent-pay intent submit-proof <intent-id> --proof <settle-proof>
+cross402-usdc intent submit-proof <intent-id> --proof <settle-proof>
 ```
 
 ## Common issues
 
 | Issue | Cause | Fix |
 |-------|-------|-----|
-| "No auth config" / exit 1 | Missing credentials | Run `agent-pay auth set` first |
+| "No auth config" / exit 1 | Missing credentials | Run `cross402-usdc auth set` first |
 | "intent-id is required (no active session)" | No session, no `PAY_INTENT_ID` | Provide `[intent-id]` or run `intent create` first |
 | Backend error (stderr, exit 1) | Invalid base-url, expired key, or server issue | Check `--base-url`, re-run `auth set`, verify credentials |
 | Validation error on `intent create` | Both `--email` and `--recipient`, or missing required | Use exactly one of `--email` OR `--recipient`; ensure `--amount` and `--payer-chain` |

@@ -1,6 +1,6 @@
-# Pay SDK (JS & TS)
+# @cross402/usdc (JS & TS)
 
-[![npm version](https://img.shields.io/npm/v/@agenttech/pay.svg)](https://www.npmjs.com/package/@agenttech/pay)
+[![npm version](https://img.shields.io/npm/v/@cross402/usdc.svg)](https://www.npmjs.com/package/@cross402/usdc)
 [![node](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](https://www.typescriptlang.org)
 
@@ -32,7 +32,7 @@ Javascript & TypeScript client for the Agent Tech payment API — create intents
 ## Install
 
 ```bash
-npm install @agenttech/pay
+npm install @cross402/usdc
 ```
 
 ## Quick Start
@@ -40,7 +40,7 @@ npm install @agenttech/pay
 ### TypeScript (ESM)
 
 ```ts
-import { PayClient, IntentStatus } from "@agenttech/pay";
+import { PayClient, IntentStatus } from "@cross402/usdc";
 
 const client = new PayClient({
   baseUrl: "https://api-pay.agent.tech",
@@ -67,7 +67,7 @@ console.log("Final status:", intent.status);
 ### JavaScript (CommonJS)
 
 ```js
-const { PayClient } = require("@agenttech/pay");
+const { PayClient } = require("@cross402/usdc");
 
 const client = new PayClient({
   baseUrl: "https://api-pay.agent.tech",
@@ -107,7 +107,7 @@ For clearer separation of concerns, use dedicated entry points:
 **Server-side** (contains `secretKey` — use only on the backend):
 
 ```ts
-import { PayClient } from "@agenttech/pay/server";
+import { PayClient } from "@cross402/usdc/server";
 
 const client = new PayClient({
   baseUrl: "https://api-pay.agent.tech",
@@ -118,41 +118,41 @@ const client = new PayClient({
 **Client-side** (no secret credentials — safe for browser / payer-side code):
 
 ```ts
-import { PublicPayClient } from "@agenttech/pay/client";
+import { PublicPayClient } from "@cross402/usdc/client";
 
 const client = new PublicPayClient({
   baseUrl: "https://api-pay.agent.tech",
 });
 ```
 
-The default `@agenttech/pay` entry still exports both clients for backward compatibility.
+The default `@cross402/usdc` entry still exports both clients for backward compatibility.
 
 ## CLI
 
-The package includes a CLI (`agent-pay`) for auth management and intent operations.
+The package includes a CLI (`cross402-usdc`) for auth management and intent operations.
 
 ### Install & run
 
 ```bash
-npm install -g @agenttech/pay
-agent-pay --help
+npm install -g @cross402/usdc
+cross402-usdc --help
 ```
 
 Or run via `npx`:
 
 ```bash
-npx @agenttech/pay auth show
+npx @cross402/usdc auth show
 ```
 
 ### Auth commands
 
 | Command | Description |
 |---------|-------------|
-| `agent-pay auth set --api-key <key> --secret-key <key> --base-url <url>` | Save credentials to `~/.agent-tech-pay/config.json` |
-| `agent-pay auth show` | Show current config (secret key masked) |
-| `agent-pay auth clear` | Remove stored config |
-| `agent-pay balance read --address <addr> [--rpc-url <url>]` | Read agent USDC balance from Base chain (default RPC: https://mainnet.base.org) |
-| `agent-pay reset [--yes]` | Remove **all** stored config + sessions |
+| `cross402-usdc auth set --api-key <key> --secret-key <key> --base-url <url>` | Save credentials to `~/.cross402-usdc/config.json` |
+| `cross402-usdc auth show` | Show current config (secret key masked) |
+| `cross402-usdc auth clear` | Remove stored config |
+| `cross402-usdc balance read --address <addr> [--rpc-url <url>]` | Read agent USDC balance from Base chain (default RPC: https://mainnet.base.org) |
+| `cross402-usdc reset [--yes]` | Remove **all** stored config + sessions |
 
 Env vars `PAY_API_KEY`, `PAY_SECRET_KEY`, `PAY_BASE_URL` can be used instead of flags for `auth set`.
 
@@ -162,11 +162,11 @@ Requires auth config (except `submit-proof`). Use `auth set` first.
 
 | Command | Description |
 |---------|-------------|
-| `agent-pay intent create --amount <val> --payer-chain <chain> [--email <e> \| --recipient <r>]` | Create intent (server-side) |
-| `agent-pay intent execute [intent-id]` | Execute intent (server-side). If omitted, uses latest active session |
-| `agent-pay intent get [intent-id]` | Get intent status (server-side). If omitted, uses latest active session |
-| `agent-pay intent submit-proof <intent-id> --proof <settle-proof>` | Submit settle proof (client-side, no auth) |
-| `agent-pay intent sessions [--expired]` | List stored sessions (optionally expired only) |
+| `cross402-usdc intent create --amount <val> --payer-chain <chain> [--email <e> \| --recipient <r>]` | Create intent (server-side) |
+| `cross402-usdc intent execute [intent-id]` | Execute intent (server-side). If omitted, uses latest active session |
+| `cross402-usdc intent get [intent-id]` | Get intent status (server-side). If omitted, uses latest active session |
+| `cross402-usdc intent submit-proof <intent-id> --proof <settle-proof>` | Submit settle proof (client-side, no auth) |
+| `cross402-usdc intent sessions [--expired]` | List stored sessions (optionally expired only) |
 
 For `submit-proof`, `--base-url` or stored config is used; no secret key required.
 
@@ -197,7 +197,7 @@ The SDK provides two client classes for different use cases.
 Server-side client that uses `/v2` endpoints with authentication. The backend Agent wallet signs and executes transfers — no wallet or signing required on your side.
 
 ```ts
-import { PayClient } from "@agenttech/pay";
+import { PayClient } from "@cross402/usdc";
 
 const client = new PayClient({
   baseUrl: "https://api-pay.agent.tech",
@@ -222,7 +222,7 @@ Client-side / payer-side client that uses `/api` endpoints without authenticatio
 Both clients use the same `baseUrl` (API root without path prefix, e.g. `https://api-pay.agent.tech`).
 
 ```ts
-import { PublicPayClient } from "@agenttech/pay";
+import { PublicPayClient } from "@cross402/usdc";
 
 const client = new PublicPayClient({
   baseUrl: "https://api-pay.agent.tech",
@@ -359,7 +359,7 @@ The SDK uses two error classes:
 **`PayApiError`** — thrown for non-2xx HTTP responses from the API:
 
 ```ts
-import { PayApiError } from "@agenttech/pay";
+import { PayApiError } from "@cross402/usdc";
 
 try {
   await client.createIntent(req);
@@ -373,7 +373,7 @@ try {
 **`PayValidationError`** — thrown when the SDK rejects a request before it reaches the API. Input validation is implemented with [Zod](https://zod.dev); error messages follow the format `validation: <message>`.
 
 ```ts
-import { PayValidationError } from "@agenttech/pay";
+import { PayValidationError } from "@cross402/usdc";
 
 try {
   await client.executeIntent("");
