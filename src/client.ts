@@ -23,7 +23,7 @@ const API_PATH_PREFIX = '/api';
 const DEFAULT_TIMEOUT_MS = 30_000;
 
 /** Minimum send amount in USDC (inclusive). */
-export const MIN_SEND_AMOUNT_USDC = 0.2;
+export const MIN_SEND_AMOUNT_USDC = 0.02;
 
 // ── Client options ──────────────────────────────────────────────────────
 

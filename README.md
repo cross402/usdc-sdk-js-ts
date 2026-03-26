@@ -330,6 +330,12 @@ Use the status constants instead of bare strings:
 |---|---|---|
 | Solana | `solana` | Payer chain (source) |
 | Base | `base` | Payer chain (source) **and** settlement chain (target) |
+| BSC | `bsc` | Payer chain (source) |
+| Polygon | `polygon` | Payer chain (source) |
+| Arbitrum | `arbitrum` | Payer chain (source) |
+| Ethereum | `ethereum` | Payer chain (source) |
+| Monad | `monad` | Payer chain (source) |
+| HyperEVM | `hyperevm` | Payer chain (source) |
 
 All payments settle on **Base** regardless of the source chain. The `payerChain` field in `CreateIntentRequest` specifies the source chain only.
 
@@ -348,7 +354,7 @@ The `FeeBreakdown` interface is included in all intent response types (via `Inte
 | `totalFee` | `total_fee` | Sum of all fees |
 
 **Amount rules:**
-- Minimum: **0.01 USDC**
+- Minimum: **0.02 USDC**
 - Maximum: **1,000,000 USDC**
 - Up to **6 decimal places** (e.g. `"0.000001"`, `"123.45"`)
 
@@ -390,7 +396,7 @@ try {
 |---|---|
 | **Client constructor** | `baseUrl` is required and must not be empty |
 | **PayClient constructor** | `auth.apiKey` and `auth.secretKey` are required and must not be empty |
-| **createIntent** | `request` is required; exactly one of `email` or `recipient` must be provided; `amount` is required, must be a valid number, and ≥ 0.2 USDC; `payerChain` is required and must not be empty |
+| **createIntent** | `request` is required; exactly one of `email` or `recipient` must be provided; `amount` is required, must be a valid number, and ≥ 0.02 USDC; `payerChain` is required and must not be empty |
 | **executeIntent / getIntent** | `intentId` is required and must not be empty |
 | **submitProof** (PublicPayClient) | `intentId` and `settleProof` are required and must not be empty |
 

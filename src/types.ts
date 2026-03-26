@@ -28,6 +28,10 @@ export const Chain = {
 	MonadTestnet: 'monad-testnet',
 	/** Monad mainnet. */
 	Monad: 'monad',
+	/** HyperEVM testnet. */
+	HyperEvmTestnet: 'hyperevm-testnet',
+	/** HyperEVM mainnet. */
+	HyperEvm: 'hyperevm',
 } as const;
 
 export type ChainValue = (typeof Chain)[keyof typeof Chain];

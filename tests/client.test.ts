@@ -259,22 +259,22 @@ describe("createIntent", () => {
     ).rejects.toThrow(PayValidationError);
   });
 
-  it("throws PayValidationError when amount is below 0.2 USDC", async () => {
+  it("throws PayValidationError when amount is below 0.02 USDC", async () => {
     const client = bearerClient(mockFetcher(201, {}));
     await expect(
       client.createIntent({
         email: "a@b.com",
-        amount: "0.1",
+        amount: "0.01",
         payerChain: "solana",
       }),
     ).rejects.toThrow(PayValidationError);
     await expect(
       client.createIntent({
         email: "a@b.com",
-        amount: "0.1",
+        amount: "0.01",
         payerChain: "solana",
       }),
-    ).rejects.toThrow("0.2 USDC");
+    ).rejects.toThrow("0.02 USDC");
   });
 
   it("throws PayValidationError when amount is not a number", async () => {
@@ -288,12 +288,12 @@ describe("createIntent", () => {
     ).rejects.toThrow(PayValidationError);
   });
 
-  it("accepts amount equal to 0.2 USDC", async () => {
+  it("accepts amount equal to 0.02 USDC", async () => {
     const client = bearerClient(mockFetcher(201, { intent_id: "ok" }));
     await expect(
       client.createIntent({
         email: "a@b.com",
-        amount: "0.2",
+        amount: "0.02",
         payerChain: "solana",
       }),
     ).resolves.toBeDefined();
@@ -591,15 +591,15 @@ describe("PublicPayClient createIntent", () => {
     ).rejects.toThrow(PayValidationError);
   });
 
-  it("throws PayValidationError when amount is below 0.2 USDC", async () => {
+  it("throws PayValidationError when amount is below 0.02 USDC", async () => {
     const client = publicClient(mockFetcher(201, {}));
     await expect(
       client.createIntent({
         email: "a@b.com",
-        amount: "0.1",
+        amount: "0.01",
         payerChain: "solana",
       }),
-    ).rejects.toThrow("0.2 USDC");
+    ).rejects.toThrow("0.02 USDC");
   });
 
   it("throws PayValidationError when payerChain is empty", async () => {

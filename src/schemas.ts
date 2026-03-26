@@ -3,7 +3,7 @@ import { z as zod } from 'zod';
 import { PayValidationError } from './errors.js';
 
 /** Minimum send amount in USDC (inclusive). */
-const MIN_SEND_AMOUNT_USDC = 0.2;
+const MIN_SEND_AMOUNT_USDC = 0.02;
 
 // ── Auth ───────────────────────────────────────────────────────────────────
 
