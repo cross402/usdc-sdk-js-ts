@@ -63,7 +63,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/agent-tech/AgentPay-SDK-JS-TS"
+    "url": "https://github.com/cross402/usdc-sdk-js-ts"
   },
   "license": "MIT",
   "sideEffects": false,

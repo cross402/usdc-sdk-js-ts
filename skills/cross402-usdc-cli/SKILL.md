@@ -1,6 +1,6 @@
 ---
 name: cross402-usdc-cli
-description: Manages auth credentials and payment intent operations via cross402-usdc CLI. Use when: (1) Setting up or managing auth for Agent Tech Pay / @cross402/usdc, (2) Creating/executing payment intents (server-side Flow A), (3) Submitting settle proofs (payer-side Flow B), (4) Reading balance, sessions, or intent status. Keywords: cross402-usdc, payment intents, auth set, intent create, intent execute, submit-proof, balance read.
+description: Manages auth credentials and payment intent operations via cross402-usdc CLI. Use when: (1) Setting up or managing auth for Agent Tech / @cross402/usdc, (2) Creating/executing payment intents (server-side Flow A), (3) Submitting settle proofs (payer-side Flow B), (4) Reading balance, sessions, or intent status. Keywords: cross402-usdc, payment intents, auth set, intent create, intent execute, submit-proof, balance read.
 ---
 
 # cross402-usdc CLI

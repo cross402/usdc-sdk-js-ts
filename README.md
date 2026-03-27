@@ -88,8 +88,8 @@ main();
 ### Run the bundled example
 
 ```bash
-git clone https://github.com/agent-tech/agent-sdk-js
-cd agent-sdk-js
+git clone https://github.com/cross402/usdc-sdk-js-ts
+cd usdc-sdk-js-ts
 npm install
 
 PAY_BASE_URL=https://api-pay.agent.tech \
@@ -175,7 +175,7 @@ For `submit-proof`, `--base-url` or stored config is used; no secret key require
 ### npx (skills.sh)
 
 ```bash
-npx skills add agent-tech/AgentPay-SDK-JS-TS
+npx skills add cross402/usdc-sdk-js-ts
 ```
 
 The `skills` CLI uses the format `npx skills add <github-org>/<github-repo>`. See [skills.sh documentation](https://skills.sh/docs).
@@ -183,7 +183,7 @@ The `skills` CLI uses the format `npx skills add <github-org>/<github-repo>`. Se
 ### Clawhub
 
 ```bash
-clawhub skills add agent-tech/AgentPay-SDK-JS-TS
+clawhub skills add cross402/usdc-sdk-js-ts
 ```
 
 Install the same skill via [Clawhub](https://clawhub.ai) with the same `<org>/<repo>` format.
