@@ -47,7 +47,7 @@
     "src"
   ],
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir dist/esm --format esm --target node --external camelcase-keys --external decamelize-keys --external zod --external commander && bun build ./src/index.ts --outdir dist/cjs --format cjs --target node --external camelcase-keys --external decamelize-keys --external zod --external commander && bun build ./src/server.ts --outdir dist/esm --format esm --target node --external camelcase-keys --external decamelize-keys --external zod --external commander && bun build ./src/server.ts --outdir dist/cjs --format cjs --target node --external camelcase-keys --external decamelize-keys --external zod --external commander && bun build ./src/browser.ts --outdir dist/esm --format esm --target node --external camelcase-keys --external decamelize-keys --external zod --external commander && bun build ./src/browser.ts --outdir dist/cjs --format cjs --target node --external camelcase-keys --external decamelize-keys --external zod --external commander && bun build ./src/cli/index.ts --outdir dist/cli --format esm --target node --external camelcase-keys --external decamelize-keys --external zod --external commander && tsc -p tsconfig.build.json && tsc -p tsconfig.build.cjs.json && node -e \"require('fs').writeFileSync('dist/cjs/package.json', JSON.stringify({type:'commonjs'}))\"",
+    "build": "bun run build.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "format": "biome format --write ./src",
@@ -66,7 +66,6 @@
     "url": "https://github.com/cross402/usdc-sdk-js-ts"
   },
   "license": "MIT",
-  "sideEffects": false,
   "devDependencies": {
     "@biomejs/biome": "^2.4.5",
     "@types/node": "^25.3.1",
@@ -79,5 +78,6 @@
     "zod": "^3.23.0",
     "commander": "^12.1.0",
     "decamelize-keys": "^2.0.1"
-  }
+  },
+  "sideEffects": false
 }
