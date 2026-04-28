@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.8](https://github.com/cross402/usdc-sdk-js-ts/compare/usdc-v0.1.7...usdc-v0.1.8) (2026-04-28)
+
+
+### Features
+
+* add targetChain support to CreateIntentRequest ([099224c](https://github.com/cross402/usdc-sdk-js-ts/commit/099224c212da059d6327d38e9e49ac9bfd3e3edc))
+* add targetChain support to CreateIntentRequest ([f85cae9](https://github.com/cross402/usdc-sdk-js-ts/commit/f85cae930bc4f89c34f13bdeb92caf376bd157b9))
+
+
+### Code Refactoring
+
+* make targetChain required in CreateIntentRequest ([cb34e89](https://github.com/cross402/usdc-sdk-js-ts/commit/cb34e899b9ea2b29b59ef77688dbb979afffa5ac))
+
 ## [0.1.7](https://github.com/cross402/usdc-sdk-js-ts/compare/usdc-v0.1.6...usdc-v0.1.7) (2026-03-27)
 
 
