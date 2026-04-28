@@ -35,6 +35,7 @@ export const createIntentRequestSchema = zod
 		recipient: zod.string().optional(),
 		amount: zod.string().min(1, "'amount' is required"),
 		payerChain: zod.string().min(1, "'payerChain' is required"),
+		targetChain: zod.string().optional(),
 	})
 	.refine(
 		(data) => {

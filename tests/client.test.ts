@@ -309,6 +309,24 @@ describe("createIntent", () => {
       }),
     ).rejects.toThrow(PayValidationError);
   });
+
+  it("accepts optional targetChain", async () => {
+    const client = bearerClient(mockFetcher(201, { intent_id: "ok", target_chain: "polygon" }));
+    const resp = await client.createIntent({
+      email: "a@b.com",
+      amount: "10.00",
+      payerChain: "solana",
+      targetChain: "polygon",
+    });
+    expect(resp.targetChain).toBe("polygon");
+  });
+
+  it("works without targetChain (backward compatible)", async () => {
+    const client = bearerClient(mockFetcher(201, { intent_id: "ok" }));
+    await expect(
+      client.createIntent({ email: "a@b.com", amount: "10.00", payerChain: "solana" }),
+    ).resolves.toBeDefined();
+  });
 });
 
 describe("executeIntent", () => {
@@ -414,6 +432,50 @@ describe("request serialization", () => {
       amount: "10.00",
       payer_chain: "solana",
     });
+  });
+
+  it("serializes targetChain as target_chain in request body", async () => {
+    let sentBody: any;
+    const f: Fetcher = async (req) => {
+      sentBody = req.body ? JSON.parse(req.body) : undefined;
+      return new Response(JSON.stringify({ intent_id: "x" }), {
+        status: 201,
+      }) as unknown as Awaited<ReturnType<Fetcher>>;
+    };
+
+    const client = bearerClient(f);
+    await client.createIntent({
+      email: "test@example.com",
+      amount: "10.00",
+      payerChain: "solana",
+      targetChain: "polygon",
+    });
+
+    expect(sentBody).toEqual({
+      email: "test@example.com",
+      amount: "10.00",
+      payer_chain: "solana",
+      target_chain: "polygon",
+    });
+  });
+
+  it("omits target_chain from request body when not provided", async () => {
+    let sentBody: any;
+    const f: Fetcher = async (req) => {
+      sentBody = req.body ? JSON.parse(req.body) : undefined;
+      return new Response(JSON.stringify({ intent_id: "x" }), {
+        status: 201,
+      }) as unknown as Awaited<ReturnType<Fetcher>>;
+    };
+
+    const client = bearerClient(f);
+    await client.createIntent({
+      email: "test@example.com",
+      amount: "10.00",
+      payerChain: "solana",
+    });
+
+    expect(sentBody).not.toHaveProperty("target_chain");
   });
 });
 

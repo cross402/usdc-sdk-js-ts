@@ -4,13 +4,13 @@
 [![node](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](https://www.typescriptlang.org)
 
-Javascript & TypeScript client for the Agent Tech payment API — create intents, execute USDC transfers on Base, and query status.
+Javascript & TypeScript client for the Agent Tech payment API — create intents, execute USDC transfers, and query status.
 
 - **Lightweight** — two small runtime deps for key conversion; uses built-in `fetch` (Node 18+)
 - **Dual ESM + CommonJS** — works in TypeScript and JavaScript projects
 - **Two clients** — `PayClient` (authenticated, server-side) and `PublicPayClient` (unauthenticated, payer-side)
 - **Bearer token authentication** for PayClient
-- **All payments settle on Base** chain
+- **Multi-chain settlement** — specify `targetChain` to settle on any supported chain (defaults to `base`)
 
 ## Table of Contents
 
@@ -326,18 +326,18 @@ Use the status constants instead of bare strings:
 
 ## Supported Chains
 
-| Chain | Identifier | Role |
-|---|---|---|
-| Solana | `solana` | Payer chain (source) |
-| Base | `base` | Payer chain (source) **and** settlement chain (target) |
-| BSC | `bsc` | Payer chain (source) |
-| Polygon | `polygon` | Payer chain (source) |
-| Arbitrum | `arbitrum` | Payer chain (source) |
-| Ethereum | `ethereum` | Payer chain (source) |
-| Monad | `monad` | Payer chain (source) |
-| HyperEVM | `hyperevm` | Payer chain (source) |
+| Chain | Identifier | `payerChain` | `targetChain` |
+|---|---|---|---|
+| Solana | `solana` | ✅ | — |
+| Base | `base` | ✅ | ✅ (default) |
+| BSC | `bsc` | ✅ | ✅ |
+| Polygon | `polygon` | ✅ | ✅ |
+| Arbitrum | `arbitrum` | ✅ | ✅ |
+| Ethereum | `ethereum` | ✅ | ✅ |
+| Monad | `monad` | ✅ | — |
+| HyperEVM | `hyperevm` | ✅ | — |
 
-All payments settle on **Base** regardless of the source chain. The `payerChain` field in `CreateIntentRequest` specifies the source chain only.
+Use `payerChain` to specify the chain the payer sends from. Use `targetChain` to specify the settlement chain for the recipient (defaults to `base` when omitted).
 
 ## Fee Breakdown
 
@@ -396,7 +396,7 @@ try {
 |---|---|
 | **Client constructor** | `baseUrl` is required and must not be empty |
 | **PayClient constructor** | `auth.apiKey` and `auth.secretKey` are required and must not be empty |
-| **createIntent** | `request` is required; exactly one of `email` or `recipient` must be provided; `amount` is required, must be a valid number, and ≥ 0.02 USDC; `payerChain` is required and must not be empty |
+| **createIntent** | `request` is required; exactly one of `email` or `recipient` must be provided; `amount` is required, must be a valid number, and ≥ 0.02 USDC; `payerChain` is required and must not be empty; `targetChain` is optional |
 | **executeIntent / getIntent** | `intentId` is required and must not be empty |
 | **submitProof** (PublicPayClient) | `intentId` and `settleProof` are required and must not be empty |
 
