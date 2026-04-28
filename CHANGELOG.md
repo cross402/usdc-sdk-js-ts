@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.9](https://github.com/cross402/usdc-sdk-js-ts/compare/usdc-v0.1.8...usdc-v0.1.9) (2026-04-28)
+
+
+### Bug Fixes
+
+* replace --packages external with explicit --external flags in build ([101c1e4](https://github.com/cross402/usdc-sdk-js-ts/commit/101c1e489516879f0e8c2f85f0edff6acb87b8f2))
+* replace --packages external with explicit --external flags in build ([af33d68](https://github.com/cross402/usdc-sdk-js-ts/commit/af33d681fa08b54e10e317ca7c97ffc6fbd7927d))
+
 ## [0.1.8](https://github.com/cross402/usdc-sdk-js-ts/compare/usdc-v0.1.7...usdc-v0.1.8) (2026-04-28)
 
 
