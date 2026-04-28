@@ -10,7 +10,7 @@ Javascript & TypeScript client for the Agent Tech payment API — create intents
 - **Dual ESM + CommonJS** — works in TypeScript and JavaScript projects
 - **Two clients** — `PayClient` (authenticated, server-side) and `PublicPayClient` (unauthenticated, payer-side)
 - **Bearer token authentication** for PayClient
-- **Multi-chain settlement** — specify `targetChain` to settle on any supported chain (defaults to `base`)
+- **Multi-chain settlement** — specify `targetChain` to settle on any supported chain
 
 ## Table of Contents
 
@@ -337,7 +337,7 @@ Use the status constants instead of bare strings:
 | Monad | `monad` | ✅ | — |
 | HyperEVM | `hyperevm` | ✅ | — |
 
-Use `payerChain` to specify the chain the payer sends from. Use `targetChain` to specify the settlement chain for the recipient (defaults to `base` when omitted).
+Use `payerChain` to specify the chain the payer sends from. Use `targetChain` to specify the settlement chain for the recipient (required).
 
 ## Fee Breakdown
 
@@ -396,7 +396,7 @@ try {
 |---|---|
 | **Client constructor** | `baseUrl` is required and must not be empty |
 | **PayClient constructor** | `auth.apiKey` and `auth.secretKey` are required and must not be empty |
-| **createIntent** | `request` is required; exactly one of `email` or `recipient` must be provided; `amount` is required, must be a valid number, and ≥ 0.02 USDC; `payerChain` is required and must not be empty; `targetChain` is optional |
+| **createIntent** | `request` is required; exactly one of `email` or `recipient` must be provided; `amount` is required, must be a valid number, and ≥ 0.02 USDC; `payerChain` and `targetChain` are required and must not be empty |
 | **executeIntent / getIntent** | `intentId` is required and must not be empty |
 | **submitProof** (PublicPayClient) | `intentId` and `settleProof` are required and must not be empty |
 

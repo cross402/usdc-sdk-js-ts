@@ -57,8 +57,8 @@ export interface CreateIntentRequest {
 	recipient?: string;
 	amount: string;
 	payerChain: ChainValue | (string & {});
-	/** Target chain for settlement. Defaults to `base` when omitted. */
-	targetChain?: ChainValue | (string & {});
+	/** Target chain for settlement. */
+	targetChain: ChainValue | (string & {});
 }
 
 /** Fee details from the API. */
@@ -105,7 +105,7 @@ export interface CreateIntentResponse extends IntentBase {
 	email?: string;
 	sourceRecipient?: string;
 	payerChain: string;
-	targetChain?: string;
+	targetChain: string;
 	paymentRequirements: PaymentRequirements;
 }
 
@@ -135,7 +135,7 @@ export interface BasePayment {
 /** Response for GET /v2/intents?intent_id=... (200). */
 export interface GetIntentResponse extends IntentBase {
 	payerChain: string;
-	targetChain?: string;
+	targetChain: string;
 	receiverEmail?: string;
 	payerWallet?: string;
 	errorMessage?: string;

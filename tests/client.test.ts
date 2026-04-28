@@ -194,6 +194,7 @@ describe("createIntent", () => {
       email: "test@example.com",
       amount: "10.00",
       payerChain: "solana",
+      targetChain: "base",
     });
 
     expect(resp.intentId).toBe("intent-1");
@@ -216,6 +217,7 @@ describe("createIntent", () => {
         email: "a@b.com",
         amount: "10.00",
         payerChain: "solana",
+        targetChain: "base",
       });
       expect.fail("should have thrown");
     } catch (err) {
@@ -234,6 +236,7 @@ describe("createIntent", () => {
         recipient: "0xabc",
         amount: "10.00",
         payerChain: "solana",
+        targetChain: "base",
       }),
     ).rejects.toThrow(PayValidationError);
   });
@@ -244,6 +247,7 @@ describe("createIntent", () => {
       client.createIntent({
         amount: "10.00",
         payerChain: "solana",
+        targetChain: "base",
       }),
     ).rejects.toThrow(PayValidationError);
   });
@@ -255,6 +259,7 @@ describe("createIntent", () => {
         email: "a@b.com",
         amount: "",
         payerChain: "solana",
+        targetChain: "base",
       }),
     ).rejects.toThrow(PayValidationError);
   });
@@ -266,6 +271,7 @@ describe("createIntent", () => {
         email: "a@b.com",
         amount: "0.01",
         payerChain: "solana",
+        targetChain: "base",
       }),
     ).rejects.toThrow(PayValidationError);
     await expect(
@@ -273,6 +279,7 @@ describe("createIntent", () => {
         email: "a@b.com",
         amount: "0.01",
         payerChain: "solana",
+        targetChain: "base",
       }),
     ).rejects.toThrow("0.02 USDC");
   });
@@ -284,6 +291,7 @@ describe("createIntent", () => {
         email: "a@b.com",
         amount: "abc",
         payerChain: "solana",
+        targetChain: "base",
       }),
     ).rejects.toThrow(PayValidationError);
   });
@@ -295,6 +303,7 @@ describe("createIntent", () => {
         email: "a@b.com",
         amount: "0.02",
         payerChain: "solana",
+        targetChain: "base",
       }),
     ).resolves.toBeDefined();
   });
@@ -306,11 +315,24 @@ describe("createIntent", () => {
         email: "a@b.com",
         amount: "10.00",
         payerChain: "",
+        targetChain: "base",
       }),
     ).rejects.toThrow(PayValidationError);
   });
 
-  it("accepts optional targetChain", async () => {
+  it("throws PayValidationError when targetChain is empty", async () => {
+    const client = bearerClient(mockFetcher(201, {}));
+    await expect(
+      client.createIntent({
+        email: "a@b.com",
+        amount: "10.00",
+        payerChain: "solana",
+        targetChain: "",
+      }),
+    ).rejects.toThrow(PayValidationError);
+  });
+
+  it("deserializes targetChain from response", async () => {
     const client = bearerClient(mockFetcher(201, { intent_id: "ok", target_chain: "polygon" }));
     const resp = await client.createIntent({
       email: "a@b.com",
@@ -319,13 +341,6 @@ describe("createIntent", () => {
       targetChain: "polygon",
     });
     expect(resp.targetChain).toBe("polygon");
-  });
-
-  it("works without targetChain (backward compatible)", async () => {
-    const client = bearerClient(mockFetcher(201, { intent_id: "ok" }));
-    await expect(
-      client.createIntent({ email: "a@b.com", amount: "10.00", payerChain: "solana" }),
-    ).resolves.toBeDefined();
   });
 });
 
@@ -425,12 +440,14 @@ describe("request serialization", () => {
       email: "test@example.com",
       amount: "10.00",
       payerChain: "solana",
+      targetChain: "base",
     });
 
     expect(sentBody).toEqual({
       email: "test@example.com",
       amount: "10.00",
       payer_chain: "solana",
+      target_chain: "base",
     });
   });
 
@@ -457,25 +474,6 @@ describe("request serialization", () => {
       payer_chain: "solana",
       target_chain: "polygon",
     });
-  });
-
-  it("omits target_chain from request body when not provided", async () => {
-    let sentBody: any;
-    const f: Fetcher = async (req) => {
-      sentBody = req.body ? JSON.parse(req.body) : undefined;
-      return new Response(JSON.stringify({ intent_id: "x" }), {
-        status: 201,
-      }) as unknown as Awaited<ReturnType<Fetcher>>;
-    };
-
-    const client = bearerClient(f);
-    await client.createIntent({
-      email: "test@example.com",
-      amount: "10.00",
-      payerChain: "solana",
-    });
-
-    expect(sentBody).not.toHaveProperty("target_chain");
   });
 });
 
@@ -600,6 +598,7 @@ describe("PublicPayClient createIntent", () => {
       email: "test@example.com",
       amount: "10.00",
       payerChain: "solana",
+      targetChain: "base",
     });
 
     expect(resp.intentId).toBe("intent-public-1");
@@ -615,6 +614,7 @@ describe("PublicPayClient createIntent", () => {
         email: "a@b.com",
         amount: "10.00",
         payerChain: "solana",
+        targetChain: "base",
       });
       expect.fail("should have thrown");
     } catch (err) {
@@ -638,6 +638,7 @@ describe("PublicPayClient createIntent", () => {
         recipient: "0xabc",
         amount: "10.00",
         payerChain: "solana",
+        targetChain: "base",
       }),
     ).rejects.toThrow(PayValidationError);
   });
@@ -649,6 +650,7 @@ describe("PublicPayClient createIntent", () => {
         email: "a@b.com",
         amount: "",
         payerChain: "solana",
+        targetChain: "base",
       }),
     ).rejects.toThrow(PayValidationError);
   });
@@ -660,6 +662,7 @@ describe("PublicPayClient createIntent", () => {
         email: "a@b.com",
         amount: "0.01",
         payerChain: "solana",
+        targetChain: "base",
       }),
     ).rejects.toThrow("0.02 USDC");
   });
@@ -671,6 +674,7 @@ describe("PublicPayClient createIntent", () => {
         email: "a@b.com",
         amount: "10.00",
         payerChain: "",
+        targetChain: "base",
       }),
     ).rejects.toThrow(PayValidationError);
   });
