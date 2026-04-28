@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.10](https://github.com/cross402/usdc-sdk-js-ts/compare/usdc-v0.1.9...usdc-v0.1.10) (2026-04-28)
+
+
+### Bug Fixes
+
+* build not export correctly ([4b6cd06](https://github.com/cross402/usdc-sdk-js-ts/commit/4b6cd0677223e8b5bb2876caf86a8c303452059f))
+* build not export correctly ([f8cf852](https://github.com/cross402/usdc-sdk-js-ts/commit/f8cf85227d7d22320b13a3f0e42f5654846d4e71))
+
 ## [0.1.9](https://github.com/cross402/usdc-sdk-js-ts/compare/usdc-v0.1.8...usdc-v0.1.9) (2026-04-28)
 
 
