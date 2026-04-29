@@ -8,7 +8,6 @@ export type { PayClientOptions } from './client.js';
 export { PayClient } from './client.js';
 export { PayApiError, PayValidationError } from './errors.js';
 export type {
-	BasePayment,
 	ChainValue,
 	CreateIntentRequest,
 	CreateIntentResponse,
@@ -19,5 +18,7 @@ export type {
 	IntentStatusValue,
 	PaymentRequirements,
 	SourcePayment,
+	SupportedChainsResponse,
+	TargetPayment,
 } from './types.js';
 export { Chain, IntentStatus } from './types.js';
