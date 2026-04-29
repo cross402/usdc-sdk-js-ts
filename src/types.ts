@@ -32,6 +32,10 @@ export const Chain = {
 	HyperEvmTestnet: 'hyperevm-testnet',
 	/** HyperEVM mainnet. */
 	HyperEvm: 'hyperevm',
+	/** SKALE Europa Liquidity Hub (payer-only). */
+	SkaleBase: 'skale-base',
+	/** MegaETH (payer-only). */
+	MegaEth: 'megaeth',
 } as const;
 
 export type ChainValue = (typeof Chain)[keyof typeof Chain];
@@ -42,8 +46,8 @@ export const IntentStatus = {
 	Pending: 'PENDING',
 	VerificationFailed: 'VERIFICATION_FAILED',
 	SourceSettled: 'SOURCE_SETTLED',
-	BaseSettling: 'BASE_SETTLING',
-	BaseSettled: 'BASE_SETTLED',
+	TargetSettling: 'TARGET_SETTLING',
+	TargetSettled: 'TARGET_SETTLED',
 	PartialSettlement: 'PARTIAL_SETTLEMENT',
 	Expired: 'EXPIRED',
 } as const;
@@ -124,8 +128,8 @@ export interface SourcePayment {
 	explorerUrl: string;
 }
 
-/** Base-chain payment details from GetIntent. */
-export interface BasePayment {
+/** Target-chain payment details from GetIntent. */
+export interface TargetPayment {
 	txHash: string;
 	settleProof: string;
 	settledAt: string;
@@ -141,5 +145,13 @@ export interface GetIntentResponse extends IntentBase {
 	errorMessage?: string;
 	completedAt?: string;
 	sourcePayment?: SourcePayment;
-	basePayment?: BasePayment;
+	targetPayment?: TargetPayment;
+}
+
+/** Response for GET /chains (200). Lists chains supported at runtime. */
+export interface SupportedChainsResponse {
+	/** Chains usable as `payerChain` in CreateIntentRequest. */
+	chains: string[];
+	/** Chains usable as `targetChain` in CreateIntentRequest. */
+	targetChains: string[];
 }

@@ -4,6 +4,7 @@ import {
   PublicPayClient,
   PayApiError,
   PayValidationError,
+  Chain,
   IntentStatus,
 } from "../src/index.js";
 import type {
@@ -93,7 +94,7 @@ describe("PayClient constructor", () => {
   });
 
   it("strips trailing slash from baseUrl", () => {
-    const f = mockFetcher(200, { intent_id: "x", status: "BASE_SETTLED" });
+    const f = mockFetcher(200, { intent_id: "x", status: "TARGET_SETTLED" });
     const client = new PayClient({
       baseUrl: "http://localhost/",
       auth: { apiKey: "id", secretKey: "secret" },
@@ -348,7 +349,7 @@ describe("executeIntent", () => {
   it("sends POST /v2/intents/{id}/execute and returns 200", async () => {
     const f = mockFetcher(
       200,
-      { intent_id: "abc-123", status: IntentStatus.BaseSettled },
+      { intent_id: "abc-123", status: IntentStatus.TargetSettled },
       (req) => {
         expect(req.url).toBe("http://localhost/v2/intents/abc-123/execute");
       },
@@ -356,7 +357,7 @@ describe("executeIntent", () => {
 
     const client = bearerClient(f);
     const resp = await client.executeIntent("abc-123");
-    expect(resp.status).toBe(IntentStatus.BaseSettled);
+    expect(resp.status).toBe(IntentStatus.TargetSettled);
   });
 
   it("throws PayValidationError for empty intentId", async () => {
@@ -371,7 +372,7 @@ describe("getIntent", () => {
   it("sends GET /v2/intents?intent_id=... and returns 200", async () => {
     const f = mockFetcher(
       200,
-      { intent_id: "xyz", status: IntentStatus.BaseSettled },
+      { intent_id: "xyz", status: IntentStatus.TargetSettled },
       (req) => {
         expect(req.url).toBe("http://localhost/v2/intents?intent_id=xyz");
       },
@@ -380,6 +381,27 @@ describe("getIntent", () => {
     const client = bearerClient(f);
     const resp = await client.getIntent("xyz");
     expect(resp.intentId).toBe("xyz");
+  });
+
+  it("deserializes target_payment as targetPayment", async () => {
+    const f = mockFetcher(200, {
+      intent_id: "xyz",
+      status: IntentStatus.TargetSettled,
+      target_payment: {
+        tx_hash: "0xdeadbeef",
+        settle_proof: "proof-xyz",
+        settled_at: "2026-04-30T00:00:00Z",
+        explorer_url: "https://polygonscan.com/tx/0xdeadbeef",
+      },
+    });
+
+    const client = bearerClient(f);
+    const resp = await client.getIntent("xyz");
+    expect(resp.targetPayment?.txHash).toBe("0xdeadbeef");
+    expect(resp.targetPayment?.settleProof).toBe("proof-xyz");
+    expect(resp.targetPayment?.explorerUrl).toBe(
+      "https://polygonscan.com/tx/0xdeadbeef",
+    );
   });
 
   it("throws PayValidationError for empty intentId", async () => {
@@ -726,7 +748,7 @@ describe("PublicPayClient getIntent", () => {
   it("sends GET /api/intents?intent_id=... and returns 200", async () => {
     const f = mockFetcher(
       200,
-      { intent_id: "abc", status: IntentStatus.BaseSettled },
+      { intent_id: "abc", status: IntentStatus.TargetSettled },
       (req) => {
         expect(req.url).toBe("http://localhost/api/intents?intent_id=abc");
       },
@@ -740,5 +762,91 @@ describe("PublicPayClient getIntent", () => {
   it("throws PayValidationError for empty intentId", async () => {
     const client = publicClient(mockFetcher(200, {}));
     await expect(client.getIntent("")).rejects.toThrow(PayValidationError);
+  });
+});
+
+// ── listSupportedChains ─────────────────────────────────────────────────
+
+describe("listSupportedChains", () => {
+  const chainsBody = {
+    chains: ["solana", "base", "bsc", "skale-base", "megaeth"],
+    target_chains: ["solana", "base", "bsc"],
+  };
+
+  it("PayClient hits GET /api/chains and returns camelCased payload", async () => {
+    const f = mockFetcher(200, chainsBody, (req) => {
+      expect(req.url).toBe("http://localhost/api/chains");
+      expect(req.method).toBe("GET");
+    });
+
+    const client = bearerClient(f);
+    const resp = await client.listSupportedChains();
+    expect(resp.chains).toContain("skale-base");
+    expect(resp.chains).toContain("megaeth");
+    expect(resp.targetChains).toEqual(["solana", "base", "bsc"]);
+  });
+
+  it("PublicPayClient hits GET /api/chains and returns camelCased payload", async () => {
+    const f = mockFetcher(200, chainsBody, (req) => {
+      expect(req.url).toBe("http://localhost/api/chains");
+      expect(req.method).toBe("GET");
+      expect(req.headers).not.toHaveProperty("Authorization");
+    });
+
+    const client = publicClient(f);
+    const resp = await client.listSupportedChains();
+    expect(resp.targetChains).toContain("base");
+  });
+
+  it("PayClient throws PayApiError on non-200", async () => {
+    const f = mockFetcher(500, { message: "boom" });
+    const client = bearerClient(f);
+    await expect(client.listSupportedChains()).rejects.toThrow(PayApiError);
+  });
+});
+
+// ── New payer chains (skale-base, megaeth) ─────────────────────────────
+
+describe("new payer chains", () => {
+  it("accepts Chain.SkaleBase as payerChain and serializes correctly", async () => {
+    let sentBody: any;
+    const f: Fetcher = async (req) => {
+      sentBody = req.body ? JSON.parse(req.body) : undefined;
+      return new Response(JSON.stringify({ intent_id: "x" }), {
+        status: 201,
+      }) as unknown as Awaited<ReturnType<Fetcher>>;
+    };
+
+    const client = bearerClient(f);
+    await client.createIntent({
+      email: "a@b.com",
+      amount: "10.00",
+      payerChain: Chain.SkaleBase,
+      targetChain: Chain.Base,
+    });
+
+    expect(sentBody.payer_chain).toBe("skale-base");
+    expect(sentBody.target_chain).toBe("base");
+  });
+
+  it("accepts Chain.MegaEth as payerChain and serializes correctly", async () => {
+    let sentBody: any;
+    const f: Fetcher = async (req) => {
+      sentBody = req.body ? JSON.parse(req.body) : undefined;
+      return new Response(JSON.stringify({ intent_id: "x" }), {
+        status: 201,
+      }) as unknown as Awaited<ReturnType<Fetcher>>;
+    };
+
+    const client = bearerClient(f);
+    await client.createIntent({
+      email: "a@b.com",
+      amount: "10.00",
+      payerChain: Chain.MegaEth,
+      targetChain: Chain.SolanaMainnet,
+    });
+
+    expect(sentBody.payer_chain).toBe("megaeth");
+    expect(sentBody.target_chain).toBe("solana-mainnet-beta");
   });
 });

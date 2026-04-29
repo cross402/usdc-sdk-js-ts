@@ -45,6 +45,7 @@ const resp = await client.createIntent({
   email,
   amount: "10.00",
   payerChain: "solana",
+  targetChain: "base",
 });
 
 console.log(`Intent created: ${resp.intentId}`);

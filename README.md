@@ -52,6 +52,7 @@ const resp = await client.createIntent({
   email: "merchant@example.com",
   amount: "100.50",
   payerChain: "solana",
+  targetChain: "base",
 });
 console.log("Intent ID:", resp.intentId);
 
@@ -79,6 +80,7 @@ async function main() {
     email: "merchant@example.com",
     amount: "100.50",
     payerChain: "solana",
+    targetChain: "base",
   });
   console.log("Intent ID:", resp.intentId);
 }
@@ -204,7 +206,7 @@ const client = new PayClient({
   auth: { apiKey: "id", secretKey: "secret" },
 });
 
-const intent = await client.createIntent({ email: "merchant@example.com", amount: "10.00", payerChain: "solana" });
+const intent = await client.createIntent({ email: "merchant@example.com", amount: "10.00", payerChain: "solana", targetChain: "base" });
 const exec   = await client.executeIntent(intent.intentId);
 const status = await client.getIntent(intent.intentId);
 ```
@@ -212,8 +214,9 @@ const status = await client.getIntent(intent.intentId);
 | Method | Endpoint | Description |
 |---|---|---|
 | `createIntent(req)` | `POST /v2/intents` | Create a payment intent |
-| `executeIntent(id)` | `POST /v2/intents/{id}/execute` | Execute transfer on Base with Agent wallet |
+| `executeIntent(id)` | `POST /v2/intents/{id}/execute` | Execute transfer on the target chain with the Agent wallet |
 | `getIntent(id)` | `GET /v2/intents?intent_id=...` | Get intent status and receipt |
+| `listSupportedChains()` | `GET /api/chains` | List runtime-enabled payer and target chains |
 
 ### PublicPayClient (Unauthenticated)
 
@@ -228,7 +231,7 @@ const client = new PublicPayClient({
   baseUrl: "https://api-pay.agent.tech",
 });
 
-const intent = await client.createIntent({ recipient: "0x...", amount: "10.00", payerChain: "base" });
+const intent = await client.createIntent({ recipient: "0x...", amount: "10.00", payerChain: "base", targetChain: "base" });
 // ... payer signs X402 payment off-chain ...
 const result = await client.submitProof(intent.intentId, "settle_proof_string");
 const status = await client.getIntent(intent.intentId);
@@ -239,6 +242,7 @@ const status = await client.getIntent(intent.intentId);
 | `createIntent(req)` | `POST /api/intents` | Create a payment intent |
 | `submitProof(id, proof)` | `POST /api/intents/{id}` | Submit settle proof after X402 payment |
 | `getIntent(id)` | `GET /api/intents?intent_id=...` | Get intent status and receipt |
+| `listSupportedChains()` | `GET /api/chains` | List runtime-enabled payer and target chains |
 
 ## Authentication
 
@@ -302,14 +306,14 @@ Intents expire **10 minutes** after creation.
                         └───────┬────────┘
                                 │
                                 ▼
-                        ┌───────────────┐
-                        │ BASE_SETTLING │
-                        └───────┬───────┘
+                       ┌─────────────────┐
+                       │ TARGET_SETTLING │
+                       └────────┬────────┘
                                 │
                                 ▼
-                        ┌──────────────┐
-                        │ BASE_SETTLED │
-                        └──────────────┘
+                       ┌────────────────┐
+                       │ TARGET_SETTLED │
+                       └────────────────┘
 ```
 
 Use the status constants instead of bare strings:
@@ -320,24 +324,29 @@ Use the status constants instead of bare strings:
 | `IntentStatus.Pending` | `PENDING` | Execution initiated, processing |
 | `IntentStatus.VerificationFailed` | `VERIFICATION_FAILED` | Source payment verification failed (terminal) |
 | `IntentStatus.SourceSettled` | `SOURCE_SETTLED` | Source chain payment confirmed |
-| `IntentStatus.BaseSettling` | `BASE_SETTLING` | USDC transfer on Base in progress |
-| `IntentStatus.BaseSettled` | `BASE_SETTLED` | Transfer complete — check `basePayment` for receipt (terminal) |
+| `IntentStatus.TargetSettling` | `TARGET_SETTLING` | USDC transfer on target chain in progress |
+| `IntentStatus.TargetSettled` | `TARGET_SETTLED` | Transfer complete — check `targetPayment` for receipt (terminal) |
+| `IntentStatus.PartialSettlement` | `PARTIAL_SETTLEMENT` | Source settled but target settlement failed (terminal — contact support) |
 | `IntentStatus.Expired` | `EXPIRED` | Intent was not executed within 10 minutes (terminal) |
 
 ## Supported Chains
 
 | Chain | Identifier | `payerChain` | `targetChain` |
 |---|---|---|---|
-| Solana | `solana` | ✅ | — |
-| Base | `base` | ✅ | ✅ (default) |
+| Solana | `solana` | ✅ | ✅ |
+| Base | `base` | ✅ | ✅ |
 | BSC | `bsc` | ✅ | ✅ |
 | Polygon | `polygon` | ✅ | ✅ |
 | Arbitrum | `arbitrum` | ✅ | ✅ |
 | Ethereum | `ethereum` | ✅ | ✅ |
-| Monad | `monad` | ✅ | — |
-| HyperEVM | `hyperevm` | ✅ | — |
+| Monad | `monad` | ✅ | ✅ |
+| HyperEVM | `hyperevm` | ✅ | ✅ |
+| SKALE Europa | `skale-base` | ✅ | — |
+| MegaETH | `megaeth` | ✅ | — |
 
-Use `payerChain` to specify the chain the payer sends from. Use `targetChain` to specify the settlement chain for the recipient (required).
+Both fields accept testnet variants (`solana-devnet`, `base-sepolia`, `bsc-testnet`, `polygon-amoy`, `arbitrum-sepolia`, `ethereum-sepolia`, `monad-testnet`, `hyperevm-testnet`).
+
+Use `payerChain` to specify the chain the payer sends from. Use `targetChain` to specify the settlement chain for the recipient (required). Call `listSupportedChains()` to get the runtime-enabled set for your environment.
 
 ## Fee Breakdown
 
@@ -347,8 +356,8 @@ The `FeeBreakdown` interface is included in all intent response types (via `Inte
 |---|---|---|
 | `sourceChain` | `source_chain` | Source chain identifier |
 | `sourceChainFee` | `source_chain_fee` | Gas/network fee on the source chain |
-| `targetChain` | `target_chain` | Target chain (always `"base"`) |
-| `targetChainFee` | `target_chain_fee` | Gas/network fee on Base |
+| `targetChain` | `target_chain` | Settlement chain selected on the request |
+| `targetChainFee` | `target_chain_fee` | Gas/network fee on the target chain |
 | `platformFee` | `platform_fee` | Platform service fee |
 | `platformFeePercentage` | `platform_fee_percentage` | Platform fee as a percentage |
 | `totalFee` | `total_fee` | Sum of all fees |

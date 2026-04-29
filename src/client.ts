@@ -15,6 +15,7 @@ import type {
 	ExecuteIntentResponse,
 	GetIntentResponse,
 	SubmitProofResponse,
+	SupportedChainsResponse,
 } from './types.js';
 import { keysToCamel } from './utils.js';
 
@@ -131,6 +132,28 @@ export class PayClient {
 		}
 		return keysToCamel(await resp.json()) as GetIntentResponse;
 	}
+
+	/**
+	 * List runtime-enabled payer and target chains (GET /api/chains).
+	 * The route is unauthenticated and shared with PublicPayClient.
+	 */
+	async listSupportedChains(
+		signal?: AbortSignal,
+	): Promise<SupportedChainsResponse> {
+		const resp = await doRequest({
+			url: this.baseUrl + API_PATH_PREFIX + '/chains',
+			method: 'GET',
+			headers: {},
+			signal,
+			fetcher: this.fetchFn,
+			timeoutMs: this.timeoutMs,
+			hasCustomFetch: this.hasCustomFetch,
+		});
+		if (resp.status !== 200) {
+			throw await parseError(resp);
+		}
+		return keysToCamel(await resp.json()) as SupportedChainsResponse;
+	}
 }
 
 // ── PublicPayClient ─────────────────────────────────────────────────────
@@ -238,5 +261,18 @@ export class PublicPayClient {
 			throw await parseError(resp);
 		}
 		return keysToCamel(await resp.json()) as GetIntentResponse;
+	}
+
+	/**
+	 * List runtime-enabled payer and target chains (GET /api/chains).
+	 */
+	async listSupportedChains(
+		signal?: AbortSignal,
+	): Promise<SupportedChainsResponse> {
+		const resp = await this.do('GET', '/chains', undefined, signal);
+		if (resp.status !== 200) {
+			throw await parseError(resp);
+		}
+		return keysToCamel(await resp.json()) as SupportedChainsResponse;
 	}
 }
