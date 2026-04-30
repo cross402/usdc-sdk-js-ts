@@ -344,13 +344,17 @@ Use the status constants instead of bare strings:
 | SKALE Europa | `skale-base` | ✅ | — |
 | MegaETH | `megaeth` | ✅ | — |
 
-Both fields accept testnet variants (`solana-devnet`, `base-sepolia`, `bsc-testnet`, `polygon-amoy`, `arbitrum-sepolia`, `ethereum-sepolia`, `monad-testnet`, `hyperevm-testnet`).
+Both fields accept testnet variants (`solana-devnet`, `base-sepolia`, `bsc-testnet`, `polygon-amoy`, `arbitrum-sepolia`, `ethereum-sepolia`, `monad-testnet`, `hyperevm-testnet`, `skale-base-sepolia`).
 
 Use `payerChain` to specify the chain the payer sends from. Use `targetChain` to specify the settlement chain for the recipient (required). Call `listSupportedChains()` to get the runtime-enabled set for your environment.
 
 ## Fee Breakdown
 
-The `FeeBreakdown` interface is included in all intent response types (via `IntentBase`):
+The `FeeBreakdown` interface is included in intent response types when the
+backend has detail to surface. It is **optional** in every response and may
+also be omitted on `GetIntentResponse` while the intent is still in early
+states (the same is true for `sendingAmount` / `receivingAmount` /
+`estimatedFee` on `GetIntentResponse`).
 
 | Field | JSON | Description |
 |---|---|---|

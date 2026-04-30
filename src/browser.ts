@@ -14,6 +14,7 @@ export type {
 	GetIntentResponse,
 	IntentBase,
 	IntentStatusValue,
+	IntentSummary,
 	PaymentRequirements,
 	SourcePayment,
 	SubmitProofResponse,

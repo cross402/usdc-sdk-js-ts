@@ -829,6 +829,27 @@ describe("new payer chains", () => {
     expect(sentBody.target_chain).toBe("base");
   });
 
+  it("accepts Chain.SkaleBaseSepolia as payerChain testnet alias", async () => {
+    let sentBody: any;
+    const f: Fetcher = async (req) => {
+      sentBody = req.body ? JSON.parse(req.body) : undefined;
+      return new Response(JSON.stringify({ intent_id: "x" }), {
+        status: 201,
+      }) as unknown as Awaited<ReturnType<Fetcher>>;
+    };
+
+    const client = bearerClient(f);
+    await client.createIntent({
+      email: "a@b.com",
+      amount: "10.00",
+      payerChain: Chain.SkaleBaseSepolia,
+      targetChain: Chain.BaseSepolia,
+    });
+
+    expect(sentBody.payer_chain).toBe("skale-base-sepolia");
+    expect(sentBody.target_chain).toBe("base-sepolia");
+  });
+
   it("accepts Chain.MegaEth as payerChain and serializes correctly", async () => {
     let sentBody: any;
     const f: Fetcher = async (req) => {

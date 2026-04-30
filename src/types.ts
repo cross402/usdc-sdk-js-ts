@@ -34,6 +34,8 @@ export const Chain = {
 	HyperEvm: 'hyperevm',
 	/** SKALE Europa Liquidity Hub (payer-only). */
 	SkaleBase: 'skale-base',
+	/** SKALE Europa Liquidity Hub testnet (payer-only). */
+	SkaleBaseSepolia: 'skale-base-sepolia',
 	/** MegaETH (payer-only). */
 	MegaEth: 'megaeth',
 } as const;
@@ -94,18 +96,32 @@ export interface PaymentRequirements {
 /** Fields shared across all intent response types. */
 export interface IntentBase {
 	intentId: string;
+	/**
+	 * UUID of the agent that owns this intent. Populated for v2 endpoints
+	 * (API Key auth) and omitted for the unauthenticated /api flow.
+	 */
+	agentId?: string;
 	merchantRecipient: string;
-	sendingAmount: string;
-	receivingAmount: string;
-	estimatedFee: string;
-	feeBreakdown: FeeBreakdown;
 	status: IntentStatusValue;
 	createdAt: string;
 	expiresAt: string;
 }
 
+/**
+ * Intent response variant returned by create / execute / submit-proof flows.
+ * The settlement quote (`sendingAmount`, `receivingAmount`, `estimatedFee`)
+ * is always populated; `feeBreakdown` is omitted when the backend has no
+ * detail to surface.
+ */
+export interface IntentSummary extends IntentBase {
+	sendingAmount: string;
+	receivingAmount: string;
+	estimatedFee: string;
+	feeBreakdown?: FeeBreakdown;
+}
+
 /** Response for POST /v2/intents (201). */
-export interface CreateIntentResponse extends IntentBase {
+export interface CreateIntentResponse extends IntentSummary {
 	email?: string;
 	sourceRecipient?: string;
 	payerChain: string;
@@ -114,7 +130,7 @@ export interface CreateIntentResponse extends IntentBase {
 }
 
 /** Response for POST /v2/intents/{intent_id}/execute (200). */
-export interface ExecuteIntentResponse extends IntentBase {}
+export interface ExecuteIntentResponse extends IntentSummary {}
 
 /** Response for POST /api/intents/{intent_id} (200) — alias for ExecuteIntentResponse. */
 export type SubmitProofResponse = ExecuteIntentResponse;
@@ -136,8 +152,18 @@ export interface TargetPayment {
 	explorerUrl: string;
 }
 
-/** Response for GET /v2/intents?intent_id=... (200). */
+/**
+ * Response for GET /v2/intents?intent_id=... (200).
+ *
+ * The settlement quote fields (`sendingAmount`, `receivingAmount`,
+ * `estimatedFee`, `feeBreakdown`) are optional here — the backend only
+ * populates them once the intent has progressed past the initial state.
+ */
 export interface GetIntentResponse extends IntentBase {
+	sendingAmount?: string;
+	receivingAmount?: string;
+	estimatedFee?: string;
+	feeBreakdown?: FeeBreakdown;
 	payerChain: string;
 	targetChain: string;
 	receiverEmail?: string;
