@@ -87,13 +87,50 @@ cross402-usdc intent get [intent-id]
 Returns intent status and receipt.
 If `intent-id` is omitted, uses the latest active session or `PAY_INTENT_ID` env var.
 
+**Ownership policy**: when the request reaches the v2 endpoint, the server checks the intent's `agent_id` against the API key's agent. Intents owned by another agent — and intents created via the unauthenticated `/api` flow (no agent) — return **HTTP 404** with the same body string as a missing intent (`"payment intent not found"`). This is intentional: collapsing 403 and 404 to the same response prevents authenticated callers from probing for valid intent IDs across other agents by observing the 403/404 split. The same policy applies to `intent execute`.
+
+### intent list
+
+```bash
+cross402-usdc intent list [--page <n>] [--page-size <n>]
+```
+
+Returns the **server-side** paginated list of intents owned by the authenticated agent, most recent first. Distinct from `intent sessions`, which only inspects the local on-disk session cache.
+
+- `--page` is 1-indexed (server caps at 1,000,000)
+- `--page-size` must be in `[1, 100]` (server default 20)
+- Both flags are optional; omit either to use the server default
+
+The response body has shape `{ intents: [...], total: N, page: N, pageSize: N }`. Each list row carries `agentId`, `intentId`, `status`, `payerChain`, `targetChain`, the settlement-quote fields, and timestamps.
+
 ### intent sessions
 
 ```bash
 cross402-usdc intent sessions [--expired]
 ```
 
-Lists stored sessions. Use `--expired` to show only expired intents.
+Lists stored sessions (local file cache only — does not hit the API). Use `intent list` for the server-side history.
+
+### me
+
+```bash
+cross402-usdc me
+```
+
+Returns the calling agent's identity from the `/v2/me` endpoint:
+
+```json
+{
+  "agentId": "uuid",
+  "agentNumber": "A-001",
+  "name": "demo agent",
+  "status": "ACTIVE",
+  "walletAddress": "0x...",
+  "solanaWalletAddress": "..."
+}
+```
+
+Cheap to call — the backend reads from middleware context and does not hit the database. Useful as a startup credential check and for discovering the agent's funded EVM/Solana wallet addresses.
 
 ## Flow B: Client-side / payer-side (no auth required)
 

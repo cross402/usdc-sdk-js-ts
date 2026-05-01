@@ -53,14 +53,16 @@ There are two independent flows. Do not mix them.
 
 The backend Agent wallet signs and executes the transfer. The caller never handles proofs or wallet signing.
 
-**MANDATORY**: Before Flow A commands, read [reference.md](reference.md) sections: "Flow A: Server-side commands", "intent create", "intent execute", "intent get", "intent sessions".
+**MANDATORY**: Before Flow A commands, read [reference.md](reference.md) sections: "Flow A: Server-side commands", "intent create", "intent execute", "intent get", "intent list", "intent sessions", "me".
 
 | Command | Description |
 |---------|-------------|
 | `intent create --amount <val> --payer-chain <chain> [--email <e> \| --recipient <r>]` | Create payment intent |
 | `intent execute [intent-id]` | Execute transfer on Base (Agent wallet signs); defaults to latest active session |
-| `intent get [intent-id]` | Query intent status; defaults to latest active session |
-| `intent sessions [--expired]` | List stored sessions |
+| `intent get [intent-id]` | Query intent status; defaults to latest active session. **Returns 404 for intents owned by another agent** (uniform response — does not leak existence) |
+| `intent list [--page <n>] [--page-size <n>]` | Server-side paginated list of intents owned by the authenticated agent (most recent first). `page` is 1-indexed; `page-size` ∈ [1,100] |
+| `intent sessions [--expired]` | List stored sessions (local file cache, not server-side) |
+| `me` | Show the authenticated agent's identity (id, number, name, status, wallets). Cheapest way to verify a credential is live |
 
 **Rules for `intent create`:**
 - Required: `--amount`, `--payer-chain` (e.g. `solana`, `base`)

@@ -187,6 +187,55 @@ export function registerIntentCommands(program: Command): void {
 		});
 
 	intent
+		.command('list')
+		.description(
+			'List intents owned by the authenticated agent (server-side, requires auth)',
+		)
+		.option('--page <n>', 'Page number (1-indexed; server default 1)')
+		.option('--page-size <n>', 'Page size in [1,100] (server default 20)')
+		.action(async (opts: { page?: string; pageSize?: string }) => {
+			const config = requireAuthConfig();
+
+			const page = opts.page ? Number(opts.page) : undefined;
+			const pageSize = opts.pageSize ? Number(opts.pageSize) : undefined;
+
+			const client = new PayClient({
+				baseUrl: config.baseUrl,
+				auth: { apiKey: config.apiKey, secretKey: config.secretKey },
+			});
+
+			try {
+				const res = await client.listIntents({ page, pageSize });
+				console.log(JSON.stringify(res, null, 2));
+			} catch (err) {
+				console.error(err instanceof Error ? err.message : err);
+				process.exit(1);
+			}
+		});
+
+	program
+		.command('me')
+		.description(
+			'Show the calling agent\'s identity (server-side, requires auth)',
+		)
+		.action(async () => {
+			const config = requireAuthConfig();
+
+			const client = new PayClient({
+				baseUrl: config.baseUrl,
+				auth: { apiKey: config.apiKey, secretKey: config.secretKey },
+			});
+
+			try {
+				const res = await client.getMe();
+				console.log(JSON.stringify(res, null, 2));
+			} catch (err) {
+				console.error(err instanceof Error ? err.message : err);
+				process.exit(1);
+			}
+		});
+
+	intent
 		.command('submit-proof <intent-id>')
 		.description('Submit settle proof (client-side, no auth)')
 		.option('--proof <proof>', 'Settle proof from X402 payment')

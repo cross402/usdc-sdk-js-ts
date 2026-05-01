@@ -418,15 +418,17 @@ try {
 | **createIntent** | `request` is required; exactly one of `email` or `recipient` must be provided; `amount` is required, must be a valid number, and ≥ 0.02 USDC; `payerChain` and `targetChain` are required and must not be empty |
 | **executeIntent / getIntent** | `intentId` is required and must not be empty |
 | **submitProof** (PublicPayClient) | `intentId` and `settleProof` are required and must not be empty |
+| **listIntents** | `page` (when provided) must be an integer ≥ 1; `pageSize` (when provided) must be an integer in [1, 100] |
 
 | Status Code | Meaning |
 |---|---|
-| 400 | Bad request — invalid parameters, amount out of range, or malformed input |
+| 400 | Bad request — invalid parameters, amount out of range, malformed input, or out-of-range pagination (`page`, `page_size`) |
 | 401 | Unauthorized — missing or invalid credentials |
-| 403 | Forbidden — insufficient permissions for this operation |
-| 404 | Not found — intent does not exist |
+| 402 | Payment required — agent wallet has insufficient USDC to satisfy `executeIntent` |
+| 403 | Forbidden — reserved for future use; v2 ownership rejection returns 404, not 403 |
+| 404 | Not found — intent does not exist *or* is owned by a different agent (uniform response prevents existence-leak probing) |
 | 429 | Rate limited — too many requests (60 req/min/IP typical) |
-| 503 | Service unavailable — temporary backend issue |
+| 503 | Service unavailable — temporary backend issue (e.g. proxy wallet temporarily out of funds) |
 
 ## Advanced
 
