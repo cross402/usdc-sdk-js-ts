@@ -181,3 +181,42 @@ export interface SupportedChainsResponse {
 	/** Chains usable as `targetChain` in CreateIntentRequest. */
 	targetChains: string[];
 }
+
+/** Response for GET /v2/me (200). Identifies the calling agent. */
+export interface Me {
+	agentId: string;
+	agentNumber: string;
+	name: string;
+	status: string;
+	/** EVM wallet, omitted when the agent has no EVM wallet provisioned. */
+	walletAddress?: string;
+	/** Solana wallet, omitted when the agent has no Solana wallet provisioned. */
+	solanaWalletAddress?: string;
+}
+
+/**
+ * List-row entry returned by listIntents (GET /v2/intents/list).
+ * Carries chain identifiers in addition to the IntentSummary fields.
+ */
+export interface ListIntentItem extends IntentSummary {
+	payerChain: string;
+	targetChain: string;
+}
+
+/** Response for GET /v2/intents/list (200). Paginated, most-recent-first. */
+export interface ListIntentsResponse {
+	intents: ListIntentItem[];
+	total: number;
+	page: number;
+	pageSize: number;
+}
+
+/**
+ * Options for listIntents.
+ * - `page` is 1-indexed; omit (or pass `undefined`) to use the server default of 1.
+ * - `pageSize` must be in [1,100]; omit to use the server default of 20.
+ */
+export interface ListIntentsOptions {
+	page?: number;
+	pageSize?: number;
+}

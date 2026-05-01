@@ -209,13 +209,19 @@ const client = new PayClient({
 const intent = await client.createIntent({ email: "merchant@example.com", amount: "10.00", payerChain: "solana", targetChain: "base" });
 const exec   = await client.executeIntent(intent.intentId);
 const status = await client.getIntent(intent.intentId);
+
+// Identity + history
+const me   = await client.getMe();                       // GET /v2/me
+const page = await client.listIntents({ page: 1, pageSize: 20 }); // GET /v2/intents/list
 ```
 
 | Method | Endpoint | Description |
 |---|---|---|
 | `createIntent(req)` | `POST /v2/intents` | Create a payment intent |
 | `executeIntent(id)` | `POST /v2/intents/{id}/execute` | Execute transfer on the target chain with the Agent wallet |
-| `getIntent(id)` | `GET /v2/intents?intent_id=...` | Get intent status and receipt |
+| `getIntent(id)` | `GET /v2/intents?intent_id=...` | Get intent status and receipt (enforces caller ownership — returns 404 for intents owned by another agent) |
+| `listIntents({ page?, pageSize? })` | `GET /v2/intents/list` | Paginated list of intents owned by the calling agent, most recent first. `page` is 1-indexed; `pageSize` ∈ [1,100]. Both default server-side (1, 20) when omitted |
+| `getMe()` | `GET /v2/me` | Identity of the agent owning the API key in use (id, number, name, status, EVM/Solana wallets) |
 | `listSupportedChains()` | `GET /api/chains` | List runtime-enabled payer and target chains |
 
 ### PublicPayClient (Unauthenticated)

@@ -65,6 +65,22 @@ export const settleProofSchema = zod
 	.string()
 	.min(1, 'settle_proof is required');
 
+export const listIntentsOptionsSchema = zod
+	.object({
+		page: zod
+			.number()
+			.int("'page' must be an integer")
+			.min(1, "'page' must be >= 1")
+			.optional(),
+		pageSize: zod
+			.number()
+			.int("'pageSize' must be an integer")
+			.min(1, "'pageSize' must be >= 1")
+			.max(100, "'pageSize' must be <= 100")
+			.optional(),
+	})
+	.optional();
+
 // ── Helper ────────────────────────────────────────────────────────────────
 
 /**

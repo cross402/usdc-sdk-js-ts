@@ -4,6 +4,7 @@ import { defaultFetcher, doRequest, type Fetcher, parseError } from './http.js';
 import {
 	createIntentRequestSchema,
 	intentIdSchema,
+	listIntentsOptionsSchema,
 	parseOrThrow,
 	payClientOptionsSchema,
 	publicPayClientOptionsSchema,
@@ -14,6 +15,9 @@ import type {
 	CreateIntentResponse,
 	ExecuteIntentResponse,
 	GetIntentResponse,
+	ListIntentsOptions,
+	ListIntentsResponse,
+	Me,
 	SubmitProofResponse,
 	SupportedChainsResponse,
 } from './types.js';
@@ -153,6 +157,50 @@ export class PayClient {
 			throw await parseError(resp);
 		}
 		return keysToCamel(await resp.json()) as SupportedChainsResponse;
+	}
+
+	/**
+	 * Get the calling agent's identity (GET /v2/me).
+	 *
+	 * Cheap to call — the backend reads from middleware context and does not
+	 * hit the database. Useful as a startup credential check and for
+	 * discovering the agent's funded EVM/Solana wallet addresses.
+	 */
+	async getMe(signal?: AbortSignal): Promise<Me> {
+		const resp = await this.do('GET', '/me', undefined, signal);
+		if (resp.status !== 200) {
+			throw await parseError(resp);
+		}
+		return keysToCamel(await resp.json()) as Me;
+	}
+
+	/**
+	 * List intents owned by the calling agent (GET /v2/intents/list),
+	 * most recent first.
+	 *
+	 * `page` is 1-indexed; omit to use the server default of 1.
+	 * `pageSize` must be in [1,100]; omit to use the server default of 20.
+	 */
+	async listIntents(
+		options?: ListIntentsOptions,
+		signal?: AbortSignal,
+	): Promise<ListIntentsResponse> {
+		const opts = parseOrThrow(listIntentsOptionsSchema, options);
+		const params = new URLSearchParams();
+		if (opts?.page !== undefined) {
+			params.set('page', String(opts.page));
+		}
+		if (opts?.pageSize !== undefined) {
+			params.set('page_size', String(opts.pageSize));
+		}
+		const query = params.toString();
+		const path = query ? `/intents/list?${query}` : '/intents/list';
+
+		const resp = await this.do('GET', path, undefined, signal);
+		if (resp.status !== 200) {
+			throw await parseError(resp);
+		}
+		return keysToCamel(await resp.json()) as ListIntentsResponse;
 	}
 }
 

@@ -871,3 +871,135 @@ describe("new payer chains", () => {
     expect(sentBody.target_chain).toBe("solana-mainnet-beta");
   });
 });
+
+// ── getMe ───────────────────────────────────────────────────────────────
+
+describe("getMe", () => {
+  const meBody = {
+    agent_id: "8b2e9c4a-3f7a-4d1b-9e2c-5a6b7c8d9e0f",
+    agent_number: "A-000123",
+    name: "checkout-agent",
+    status: "active",
+    wallet_address: "0x742d35Cc",
+    solana_wallet_address: "Es9vMFrz",
+  };
+
+  it("hits GET /v2/me with bearer auth and returns camelCased payload", async () => {
+    const f = mockFetcher(200, meBody, (req) => {
+      expect(req.url).toBe("http://localhost/v2/me");
+      expect(req.method).toBe("GET");
+      expect(req.headers.Authorization).toMatch(/^Bearer /);
+    });
+
+    const client = bearerClient(f);
+    const me = await client.getMe();
+    expect(me.agentId).toBe("8b2e9c4a-3f7a-4d1b-9e2c-5a6b7c8d9e0f");
+    expect(me.agentNumber).toBe("A-000123");
+    expect(me.name).toBe("checkout-agent");
+    expect(me.walletAddress).toBe("0x742d35Cc");
+    expect(me.solanaWalletAddress).toBe("Es9vMFrz");
+  });
+
+  it("omits optional wallet fields when backend does not include them", async () => {
+    const f = mockFetcher(200, {
+      agent_id: "id-1",
+      agent_number: "A-1",
+      name: "n",
+      status: "active",
+    });
+    const client = bearerClient(f);
+    const me = await client.getMe();
+    expect(me.walletAddress).toBeUndefined();
+    expect(me.solanaWalletAddress).toBeUndefined();
+  });
+
+  it("throws PayApiError on 401", async () => {
+    const f = mockFetcher(401, { message: "api key required" });
+    const client = bearerClient(f);
+    await expect(client.getMe()).rejects.toThrow(PayApiError);
+  });
+});
+
+// ── listIntents ─────────────────────────────────────────────────────────
+
+describe("listIntents", () => {
+  const listBody = {
+    intents: [
+      {
+        intent_id: "int_abc",
+        agent_id: "agent-1",
+        merchant_recipient: "0x742d35Cc",
+        sending_amount: "100.50",
+        receiving_amount: "98.65",
+        estimated_fee: "1.85",
+        payer_chain: "base",
+        target_chain: "ethereum",
+        status: "TARGET_SETTLED",
+        created_at: "2026-04-30T00:00:00Z",
+        expires_at: "2026-04-30T00:10:00Z",
+      },
+    ],
+    total: 1,
+    page: 1,
+    page_size: 20,
+  };
+
+  it("hits GET /v2/intents/list with no query when no options given", async () => {
+    const f = mockFetcher(200, listBody, (req) => {
+      expect(req.url).toBe("http://localhost/v2/intents/list");
+      expect(req.method).toBe("GET");
+    });
+
+    const client = bearerClient(f);
+    const resp = await client.listIntents();
+    expect(resp.total).toBe(1);
+    expect(resp.page).toBe(1);
+    expect(resp.pageSize).toBe(20);
+    expect(resp.intents[0]?.intentId).toBe("int_abc");
+    expect(resp.intents[0]?.payerChain).toBe("base");
+    expect(resp.intents[0]?.targetChain).toBe("ethereum");
+    expect(resp.intents[0]?.agentId).toBe("agent-1");
+  });
+
+  it("encodes page and pageSize in the query string", async () => {
+    const f = mockFetcher(200, { ...listBody, page: 2, page_size: 50 }, (req) => {
+      expect(req.url).toBe(
+        "http://localhost/v2/intents/list?page=2&page_size=50",
+      );
+    });
+
+    const client = bearerClient(f);
+    const resp = await client.listIntents({ page: 2, pageSize: 50 });
+    expect(resp.page).toBe(2);
+    expect(resp.pageSize).toBe(50);
+  });
+
+  it("encodes only the field that is provided", async () => {
+    const f = mockFetcher(200, listBody, (req) => {
+      expect(req.url).toBe("http://localhost/v2/intents/list?page_size=10");
+    });
+
+    const client = bearerClient(f);
+    await client.listIntents({ pageSize: 10 });
+  });
+
+  it("rejects pageSize > 100 with PayValidationError", async () => {
+    const client = bearerClient(mockFetcher(200, listBody));
+    await expect(client.listIntents({ pageSize: 200 })).rejects.toThrow(
+      PayValidationError,
+    );
+  });
+
+  it("rejects page < 1 with PayValidationError", async () => {
+    const client = bearerClient(mockFetcher(200, listBody));
+    await expect(client.listIntents({ page: 0 })).rejects.toThrow(
+      PayValidationError,
+    );
+  });
+
+  it("throws PayApiError on 401", async () => {
+    const f = mockFetcher(401, { message: "api key required" });
+    const client = bearerClient(f);
+    await expect(client.listIntents()).rejects.toThrow(PayApiError);
+  });
+});
