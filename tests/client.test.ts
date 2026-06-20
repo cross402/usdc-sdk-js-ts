@@ -4,6 +4,7 @@ import {
   PublicPayClient,
   PayApiError,
   PayValidationError,
+  Asset,
   Chain,
   IntentStatus,
 } from "../src/index.js";
@@ -496,6 +497,116 @@ describe("request serialization", () => {
       payer_chain: "solana",
       target_chain: "polygon",
     });
+  });
+});
+
+// ── Assets (USDT0 / USDT) ───────────────────────────────────────────────
+
+describe("payerAsset / targetAsset", () => {
+  it("serializes payerAsset/targetAsset as payer_asset/target_asset", async () => {
+    let sentBody: any;
+    const f: Fetcher = async (req) => {
+      sentBody = req.body ? JSON.parse(req.body) : undefined;
+      return new Response(JSON.stringify({ intent_id: "x" }), {
+        status: 201,
+      }) as unknown as Awaited<ReturnType<Fetcher>>;
+    };
+
+    const client = bearerClient(f);
+    await client.createIntent({
+      recipient: "0xabc",
+      amount: "25.00",
+      payerChain: Chain.Arbitrum,
+      payerAsset: Asset.USDT0,
+      targetChain: Chain.Base,
+      targetAsset: Asset.USDC,
+    });
+
+    expect(sentBody).toEqual({
+      recipient: "0xabc",
+      amount: "25.00",
+      payer_chain: "arbitrum",
+      payer_asset: "usdt0",
+      target_chain: "base",
+      target_asset: "usdc",
+    });
+  });
+
+  it("omits asset keys when not provided (defaults to usdc server-side)", async () => {
+    let sentBody: any;
+    const f: Fetcher = async (req) => {
+      sentBody = req.body ? JSON.parse(req.body) : undefined;
+      return new Response(JSON.stringify({ intent_id: "x" }), {
+        status: 201,
+      }) as unknown as Awaited<ReturnType<Fetcher>>;
+    };
+
+    const client = bearerClient(f);
+    await client.createIntent({
+      email: "a@b.com",
+      amount: "10.00",
+      payerChain: "base",
+      targetChain: "base",
+    });
+
+    expect(sentBody).not.toHaveProperty("payer_asset");
+    expect(sentBody).not.toHaveProperty("target_asset");
+  });
+
+  it("accepts the usdt asset value", async () => {
+    let sentBody: any;
+    const f: Fetcher = async (req) => {
+      sentBody = req.body ? JSON.parse(req.body) : undefined;
+      return new Response(JSON.stringify({ intent_id: "x" }), {
+        status: 201,
+      }) as unknown as Awaited<ReturnType<Fetcher>>;
+    };
+
+    const client = bearerClient(f);
+    await client.createIntent({
+      email: "a@b.com",
+      amount: "10.00",
+      payerChain: "polygon",
+      payerAsset: Asset.USDT,
+      targetChain: "base",
+    });
+
+    expect(sentBody.payer_asset).toBe("usdt");
+  });
+
+  it("deserializes payer_asset/target_asset from the create response", async () => {
+    const f = mockFetcher(201, {
+      intent_id: "int-1",
+      status: IntentStatus.AwaitingPayment,
+      payer_asset: "usdt0",
+      target_asset: "usdc",
+    });
+
+    const client = bearerClient(f);
+    const resp = await client.createIntent({
+      recipient: "0xabc",
+      amount: "25.00",
+      payerChain: Chain.Arbitrum,
+      payerAsset: Asset.USDT0,
+      targetChain: Chain.Base,
+    });
+
+    expect(resp.payerAsset).toBe("usdt0");
+    expect(resp.targetAsset).toBe("usdc");
+  });
+
+  it("deserializes payer_asset/target_asset from getIntent", async () => {
+    const f = mockFetcher(200, {
+      intent_id: "int-1",
+      status: IntentStatus.TargetSettled,
+      payer_asset: "usdt0",
+      target_asset: "usdt",
+    });
+
+    const client = bearerClient(f);
+    const resp = await client.getIntent("int-1");
+    expect(resp.payerAsset).toBe("usdt0");
+    expect(resp.targetAsset).toBe("usdt");
   });
 });
 

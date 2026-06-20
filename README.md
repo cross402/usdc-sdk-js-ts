@@ -11,6 +11,7 @@ Javascript & TypeScript client for the Agent Tech payment API — create intents
 - **Two clients** — `PayClient` (authenticated, server-side) and `PublicPayClient` (unauthenticated, payer-side)
 - **Bearer token authentication** for PayClient
 - **Multi-chain settlement** — specify `targetChain` to settle on any supported chain
+- **Multi-asset** — pay and settle in `usdc` (default), `usdt`, or `usdt0` via `payerAsset` / `targetAsset`
 
 ## Table of Contents
 
@@ -25,6 +26,7 @@ Javascript & TypeScript client for the Agent Tech payment API — create intents
 - [Authentication](#authentication)
 - [Intent Lifecycle](#intent-lifecycle)
 - [Supported Chains](#supported-chains)
+- [Assets](#assets)
 - [Fee Breakdown](#fee-breakdown)
 - [Error Handling](#error-handling)
 - [Advanced](#advanced)
@@ -164,7 +166,7 @@ Requires auth config (except `submit-proof`). Use `auth set` first.
 
 | Command | Description |
 |---------|-------------|
-| `cross402-usdc intent create --amount <val> --payer-chain <chain> [--email <e> \| --recipient <r>]` | Create intent (server-side) |
+| `cross402-usdc intent create --amount <val> --payer-chain <chain> --target-chain <chain> [--payer-asset <usdc\|usdt\|usdt0>] [--target-asset <usdc\|usdt\|usdt0>] [--email <e> \| --recipient <r>]` | Create intent (server-side) |
 | `cross402-usdc intent execute [intent-id]` | Execute intent (server-side). If omitted, uses latest active session |
 | `cross402-usdc intent get [intent-id]` | Get intent status (server-side). If omitted, uses latest active session |
 | `cross402-usdc intent submit-proof <intent-id> --proof <settle-proof>` | Submit settle proof (client-side, no auth) |
@@ -348,6 +350,39 @@ Both fields accept testnet variants (`solana-devnet`, `base-sepolia`, `bsc-testn
 
 Use `payerChain` to specify the chain the payer sends from. Use `targetChain` to specify the settlement chain for the recipient (required). Call `listSupportedChains()` to get the runtime-enabled set for your environment.
 
+## Assets
+
+Each side of an intent carries its own asset, so the payer can fund in one
+stablecoin while the recipient settles in another. Set `payerAsset` and/or
+`targetAsset` on `createIntent`; both default to `usdc` when omitted.
+
+| Constant | Value | Notes |
+|---|---|---|
+| `Asset.USDC` | `usdc` | Native USD Coin (default) |
+| `Asset.USDT` | `usdt` | Chain-native Tether USD |
+| `Asset.USDT0` | `usdt0` | Tether's LayerZero OFT for omnichain transfers |
+
+```ts
+import { PayClient, Asset, Chain } from "@cross402/usdc";
+
+// Pay USDT0 from Arbitrum, settle USDC on Base.
+const intent = await client.createIntent({
+  recipient: "0x...",
+  amount: "25.00",
+  payerChain: Chain.Arbitrum,
+  payerAsset: Asset.USDT0,
+  targetChain: Chain.Base,
+  targetAsset: Asset.USDC,
+});
+```
+
+Asset availability is per chain and gated at runtime — an unsupported
+`(chain, asset)` pair is rejected by the API with HTTP 400. USDT0 is available
+on the chains where Tether has deployed its OFT (e.g. Arbitrum, Monad,
+HyperEVM, MegaETH); Polygon's `usdt0` maps to Tether's renamed legacy
+deployment. The `payerAsset` / `targetAsset` fields are echoed back on
+`CreateIntentResponse` and `GetIntentResponse`.
+
 ## Fee Breakdown
 
 The `FeeBreakdown` interface is included in intent response types when the
@@ -409,7 +444,7 @@ try {
 |---|---|
 | **Client constructor** | `baseUrl` is required and must not be empty |
 | **PayClient constructor** | `auth.apiKey` and `auth.secretKey` are required and must not be empty |
-| **createIntent** | `request` is required; exactly one of `email` or `recipient` must be provided; `amount` is required, must be a valid number, and ≥ 0.02 USDC; `payerChain` and `targetChain` are required and must not be empty |
+| **createIntent** | `request` is required; exactly one of `email` or `recipient` must be provided; `amount` is required, must be a valid number, and ≥ 0.02 USDC; `payerChain` and `targetChain` are required and must not be empty; `payerAsset` / `targetAsset` are optional (default `usdc`) |
 | **executeIntent / getIntent** | `intentId` is required and must not be empty |
 | **submitProof** (PublicPayClient) | `intentId` and `settleProof` are required and must not be empty |
 

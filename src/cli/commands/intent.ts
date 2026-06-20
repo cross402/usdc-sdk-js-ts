@@ -74,6 +74,12 @@ export function registerIntentCommands(program: Command): void {
 		.description('Create a payment intent (server-side, requires auth)')
 		.option('--amount <amount>', 'Amount to pay')
 		.option('--payer-chain <chain>', 'Payer chain')
+		.option('--target-chain <chain>', 'Target settlement chain')
+		.option('--payer-asset <asset>', 'Payer asset: usdc (default), usdt, usdt0')
+		.option(
+			'--target-asset <asset>',
+			'Target asset: usdc (default), usdt, usdt0',
+		)
 		.option('--email <email>', 'Recipient email (use email OR recipient)')
 		.option(
 			'--recipient <address>',
@@ -83,6 +89,9 @@ export function registerIntentCommands(program: Command): void {
 			async (opts: {
 				amount?: string;
 				payerChain?: string;
+				targetChain?: string;
+				payerAsset?: string;
+				targetAsset?: string;
 				email?: string;
 				recipient?: string;
 			}) => {
@@ -90,6 +99,10 @@ export function registerIntentCommands(program: Command): void {
 				const raw = {
 					amount: opts.amount ?? process.env.PAY_AMOUNT ?? '',
 					payerChain: opts.payerChain ?? process.env.PAY_PAYER_CHAIN ?? '',
+					targetChain: opts.targetChain ?? process.env.PAY_TARGET_CHAIN ?? '',
+					payerAsset: opts.payerAsset ?? process.env.PAY_PAYER_ASSET ?? undefined,
+					targetAsset:
+						opts.targetAsset ?? process.env.PAY_TARGET_ASSET ?? undefined,
 					email: opts.email ?? process.env.PAY_EMAIL ?? undefined,
 					recipient: opts.recipient ?? process.env.PAY_RECIPIENT ?? undefined,
 				};
