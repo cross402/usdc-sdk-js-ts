@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.3.1](https://github.com/cross402/usdc-sdk-js-ts/compare/usdc-v0.3.0...usdc-v0.3.1) (2026-06-22)
+
+
+### Features
+
+* add multi-asset support for payment intents with payerAsset and targetAsset options ([3e9c080](https://github.com/cross402/usdc-sdk-js-ts/commit/3e9c08023a11134d8ccbb3f1968093c5b5d9333b))
+* sync remaining backend-pay endpoints and fields into the SDK ([0fd02f4](https://github.com/cross402/usdc-sdk-js-ts/commit/0fd02f48e9b7a8bb6136ceaea1eb5dcf9aef712e))
+
+
+### Bug Fixes
+
+* correct executeSwap endpoint path to /v2/swap/execute ([7cbb47a](https://github.com/cross402/usdc-sdk-js-ts/commit/7cbb47ac7d8a6332fa2da308bbfa2d5f8fb9c169))
+* correct executeSwap endpoint path to /v2/swap/execute ([551b590](https://github.com/cross402/usdc-sdk-js-ts/commit/551b590185d723e70c2d6c2b48ce925e771b6998))
+* **deps:** patch dependabot security advisories in dev toolchain ([a8f8261](https://github.com/cross402/usdc-sdk-js-ts/commit/a8f82617a5b83c1f9a3de92baf71c3db4ca42cdb))
+
 ## [0.3.0](https://github.com/cross402/usdc-sdk-js-ts/compare/usdc-v0.2.1...usdc-v0.3.0) (2026-06-02)
 
 
