@@ -166,7 +166,7 @@ Requires auth config (except `submit-proof`). Use `auth set` first.
 
 | Command | Description |
 |---------|-------------|
-| `cross402-usdc intent create --amount <val> --payer-chain <chain> --target-chain <chain> [--payer-asset <usdc\|usdt\|usdt0>] [--target-asset <usdc\|usdt\|usdt0>] [--email <e> \| --recipient <r>]` | Create intent (server-side) |
+| `cross402-usdc intent create (--amount <val> \| --to-amount <val>) --payer-chain <chain> --target-chain <chain> [--payer-asset <usdc\|usdt\|usdt0>] [--target-asset <usdc\|usdt\|usdt0>] [--email <e> \| --recipient <r>] [--payer-address <addr>]` | Create intent (server-side). `--amount` is ExactOut; `--to-amount` is ExactIn (mutually exclusive) |
 | `cross402-usdc intent execute [intent-id]` | Execute intent (server-side). If omitted, uses latest active session |
 | `cross402-usdc intent get [intent-id]` | Get intent status (server-side). If omitted, uses latest active session |
 | `cross402-usdc intent submit-proof <intent-id> --proof <settle-proof>` | Submit settle proof (client-side, no auth) |
@@ -215,10 +215,18 @@ const status = await client.getIntent(intent.intentId);
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `createIntent(req)` | `POST /v2/intents` | Create a payment intent |
+| `createIntent(req)` | `POST /v2/intents` | Create a payment intent (ExactOut `amount` or ExactIn `toAmount`) |
 | `executeIntent(id)` | `POST /v2/intents/{id}/execute` | Execute transfer on the target chain with the Agent wallet |
 | `getIntent(id)` | `GET /v2/intents?intent_id=...` | Get intent status and receipt |
+| `listIntents(params?)` | `GET /v2/intents/list` | List the agent's intents (paginated: `page`, `pageSize`) |
+| `getMe()` | `GET /v2/me` | Get the authenticated agent's identity and wallet addresses |
 | `listSupportedChains()` | `GET /api/chains` | List runtime-enabled payer and target chains |
+| `getSwapQuote(params)` | `GET /api/swap/quote` | Get a swap quote (and tx when `userAddress`/`email` is set) |
+| `getSwapApproval(params)` | `GET /api/swap/approval` | Check whether an ERC-20 approval is needed before a swap |
+| `getSwapStatus(params)` | `GET /api/swap/status` | Poll cross-chain transfer status by source tx hash |
+| `executeSwap(req)` | `POST /v2/swap/execute` | Execute a swap via the agent's Privy-hosted wallet |
+| `registerSwapIntent(req)` | `POST /api/swap/intents` | Register a submitted swap tx as a trackable intent |
+| `getSwapTokens(...)` / `getSwapChains(...)` / `getSwapConnections(...)` | `GET /api/swap/{tokens,chains,connections}` | LiFi swap discovery (raw JSON) |
 
 ### PublicPayClient (Unauthenticated)
 
@@ -241,10 +249,15 @@ const status = await client.getIntent(intent.intentId);
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `createIntent(req)` | `POST /api/intents` | Create a payment intent |
+| `createIntent(req)` | `POST /api/intents` | Create a payment intent (ExactOut `amount` or ExactIn `toAmount`) |
 | `submitProof(id, proof)` | `POST /api/intents/{id}` | Submit settle proof after X402 payment |
 | `getIntent(id)` | `GET /api/intents?intent_id=...` | Get intent status and receipt |
 | `listSupportedChains()` | `GET /api/chains` | List runtime-enabled payer and target chains |
+| `getSwapQuote(params)` | `GET /api/swap/quote` | Get a swap quote (and tx when `userAddress`/`email` is set) |
+| `getSwapApproval(params)` | `GET /api/swap/approval` | Check whether an ERC-20 approval is needed before a swap |
+| `getSwapStatus(params)` | `GET /api/swap/status` | Poll cross-chain transfer status by source tx hash |
+| `registerSwapIntent(req)` | `POST /api/swap/intents` | Register a submitted swap tx as a trackable intent |
+| `getSwapTokens(...)` / `getSwapChains(...)` / `getSwapConnections(...)` | `GET /api/swap/{tokens,chains,connections}` | LiFi swap discovery (raw JSON) |
 
 ## Authentication
 
@@ -444,8 +457,11 @@ try {
 |---|---|
 | **Client constructor** | `baseUrl` is required and must not be empty |
 | **PayClient constructor** | `auth.apiKey` and `auth.secretKey` are required and must not be empty |
-| **createIntent** | `request` is required; exactly one of `email` or `recipient` must be provided; `amount` is required, must be a valid number, and ≥ 0.02 USDC; `payerChain` and `targetChain` are required and must not be empty; `payerAsset` / `targetAsset` are optional (default `usdc`) |
+| **createIntent** | `request` is required; exactly one of `email` or `recipient` must be provided; exactly one of `amount` (ExactOut) or `toAmount` (ExactIn) must be provided, must be a valid number, and ≥ 0.02 USDC; `payerChain` and `targetChain` are required and must not be empty; `payerAsset` / `targetAsset` are optional (default `usdc`); `payerAddress` is optional |
 | **executeIntent / getIntent** | `intentId` is required and must not be empty |
+| **listIntents** (PayClient) | `page` and `pageSize` are optional positive integers (`pageSize` ≤ 100) |
+| **getSwapApproval** | `chain`, `token`, `tokenOut` are required; `amount` must be a positive integer; one of `userAddress` or `email` is required |
+| **getSwapStatus** | `txHash` is required and must not be empty |
 | **submitProof** (PublicPayClient) | `intentId` and `settleProof` are required and must not be empty |
 
 | Status Code | Meaning |

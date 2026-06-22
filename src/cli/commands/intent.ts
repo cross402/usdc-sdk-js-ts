@@ -72,7 +72,14 @@ export function registerIntentCommands(program: Command): void {
 	intent
 		.command('create')
 		.description('Create a payment intent (server-side, requires auth)')
-		.option('--amount <amount>', 'Amount to pay')
+		.option(
+			'--amount <amount>',
+			'Amount the recipient receives, ExactOut (use amount OR to-amount)',
+		)
+		.option(
+			'--to-amount <amount>',
+			'Amount the payer sends, ExactIn (use amount OR to-amount)',
+		)
 		.option('--payer-chain <chain>', 'Payer chain')
 		.option('--target-chain <chain>', 'Target settlement chain')
 		.option('--payer-asset <asset>', 'Payer asset: usdc (default), usdt, usdt0')
@@ -85,19 +92,26 @@ export function registerIntentCommands(program: Command): void {
 			'--recipient <address>',
 			'Recipient wallet address (use email OR recipient)',
 		)
+		.option(
+			'--payer-address <address>',
+			'Optional payer wallet address (advisory compliance screening)',
+		)
 		.action(
 			async (opts: {
 				amount?: string;
+				toAmount?: string;
 				payerChain?: string;
 				targetChain?: string;
 				payerAsset?: string;
 				targetAsset?: string;
 				email?: string;
 				recipient?: string;
+				payerAddress?: string;
 			}) => {
 				const config = requireAuthConfig();
 				const raw = {
-					amount: opts.amount ?? process.env.PAY_AMOUNT ?? '',
+					amount: opts.amount ?? process.env.PAY_AMOUNT ?? undefined,
+					toAmount: opts.toAmount ?? process.env.PAY_TO_AMOUNT ?? undefined,
 					payerChain: opts.payerChain ?? process.env.PAY_PAYER_CHAIN ?? '',
 					targetChain: opts.targetChain ?? process.env.PAY_TARGET_CHAIN ?? '',
 					payerAsset: opts.payerAsset ?? process.env.PAY_PAYER_ASSET ?? undefined,
@@ -105,6 +119,8 @@ export function registerIntentCommands(program: Command): void {
 						opts.targetAsset ?? process.env.PAY_TARGET_ASSET ?? undefined,
 					email: opts.email ?? process.env.PAY_EMAIL ?? undefined,
 					recipient: opts.recipient ?? process.env.PAY_RECIPIENT ?? undefined,
+					payerAddress:
+						opts.payerAddress ?? process.env.PAY_PAYER_ADDRESS ?? undefined,
 				};
 				const request = parseOrExit(createIntentRequestSchema, raw);
 

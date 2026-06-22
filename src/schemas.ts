@@ -33,18 +33,31 @@ export const createIntentRequestSchema = zod
 	.object({
 		email: zod.string().optional(),
 		recipient: zod.string().optional(),
-		amount: zod.string().min(1, "'amount' is required"),
+		amount: zod.string().optional(),
+		toAmount: zod.string().optional(),
 		payerChain: zod.string().min(1, "'payerChain' is required"),
 		targetChain: zod.string().min(1, "'targetChain' is required"),
 		payerAsset: zod.string().optional(),
 		targetAsset: zod.string().optional(),
+		payerAddress: zod.string().optional(),
 	})
 	.refine(
 		(data) => {
-			const num = Number(data.amount);
+			const hasAmount = !!data.amount;
+			const hasToAmount = !!data.toAmount;
+			return hasAmount !== hasToAmount;
+		},
+		{ message: "exactly one of 'amount' or 'toAmount' must be provided" },
+	)
+	.refine(
+		(data) => {
+			// XOR is enforced above; validate whichever value is present.
+			const raw = data.amount ?? data.toAmount;
+			if (raw === undefined) return true;
+			const num = Number(raw);
 			return !Number.isNaN(num) && num >= MIN_SEND_AMOUNT_USDC;
 		},
-		{ message: `'amount' must be at least ${MIN_SEND_AMOUNT_USDC} USDC` },
+		{ message: `amount must be at least ${MIN_SEND_AMOUNT_USDC} USDC` },
 	)
 	.refine(
 		(data) => {
@@ -70,6 +83,8 @@ export const swapQuoteParamsSchema = zod
 		toChain: zod.string().optional(),
 		userAddress: zod.string().optional(),
 		toUserAddress: zod.string().optional(),
+		email: zod.string().optional(),
+		toUserEmail: zod.string().optional(),
 	})
 	.refine(
 		(data) => {
@@ -79,6 +94,35 @@ export const swapQuoteParamsSchema = zod
 		},
 		{ message: "exactly one of 'fromAmount' or 'toAmount' must be provided" },
 	);
+
+export const swapApprovalParamsSchema = zod
+	.object({
+		chain: zod.string().min(1, "'chain' is required"),
+		token: zod.string().min(1, "'token' is required"),
+		amount: zod.number().int().positive("'amount' must be a positive integer"),
+		tokenOut: zod.string().min(1, "'tokenOut' is required"),
+		userAddress: zod.string().optional(),
+		email: zod.string().optional(),
+		toChain: zod.string().optional(),
+		toUserAddress: zod.string().optional(),
+		toUserEmail: zod.string().optional(),
+		includeGasInfo: zod.boolean().optional(),
+	})
+	.refine((data) => !!data.userAddress || !!data.email, {
+		message: "one of 'userAddress' or 'email' must be provided",
+	});
+
+export const swapStatusParamsSchema = zod.object({
+	txHash: zod.string().min(1, "'txHash' is required"),
+	fromChain: zod.string().optional(),
+	toChain: zod.string().optional(),
+	bridge: zod.string().optional(),
+});
+
+export const listIntentsParamsSchema = zod.object({
+	page: zod.number().int().positive().optional(),
+	pageSize: zod.number().int().positive().max(100).optional(),
+});
 
 export const registerSwapIntentSchema = zod.object({
 	sourceTxHash: zod.string().min(1, "'sourceTxHash' is required"),
@@ -93,9 +137,7 @@ export const registerSwapIntentSchema = zod.object({
 
 // ── Method params ──────────────────────────────────────────────────────────
 
-export const intentIdSchema = zod
-	.string()
-	.min(1, 'intent_id is required');
+export const intentIdSchema = zod.string().min(1, 'intent_id is required');
 
 export const settleProofSchema = zod
 	.string()

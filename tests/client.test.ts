@@ -982,3 +982,332 @@ describe("new payer chains", () => {
     expect(sentBody.target_chain).toBe("solana-mainnet-beta");
   });
 });
+
+// ── createIntent: toAmount (ExactIn) + payerAddress ──────────────────────
+
+describe("createIntent toAmount / payerAddress", () => {
+  it("serializes toAmount as to_amount and payerAddress as payer_address", async () => {
+    let sentBody: any;
+    const f: Fetcher = async (req) => {
+      sentBody = req.body ? JSON.parse(req.body) : undefined;
+      return new Response(JSON.stringify({ intent_id: "x" }), {
+        status: 201,
+      }) as unknown as Awaited<ReturnType<Fetcher>>;
+    };
+
+    const client = bearerClient(f);
+    await client.createIntent({
+      recipient: "0xabc",
+      toAmount: "10.00",
+      payerChain: "base",
+      targetChain: "base",
+      payerAddress: "0xdef",
+    });
+
+    expect(sentBody).toEqual({
+      recipient: "0xabc",
+      to_amount: "10.00",
+      payer_chain: "base",
+      target_chain: "base",
+      payer_address: "0xdef",
+    });
+  });
+
+  it("throws PayValidationError when both amount and toAmount are set", async () => {
+    const client = bearerClient(mockFetcher(201, {}));
+    await expect(
+      client.createIntent({
+        recipient: "0xabc",
+        amount: "10.00",
+        toAmount: "10.00",
+        payerChain: "base",
+        targetChain: "base",
+      }),
+    ).rejects.toThrow(PayValidationError);
+  });
+
+  it("throws PayValidationError when neither amount nor toAmount is set", async () => {
+    const client = bearerClient(mockFetcher(201, {}));
+    await expect(
+      client.createIntent({
+        recipient: "0xabc",
+        payerChain: "base",
+        targetChain: "base",
+      } as any),
+    ).rejects.toThrow(PayValidationError);
+  });
+
+  it("enforces the 0.02 USDC minimum on toAmount", async () => {
+    const client = bearerClient(mockFetcher(201, {}));
+    await expect(
+      client.createIntent({
+        recipient: "0xabc",
+        toAmount: "0.01",
+        payerChain: "base",
+        targetChain: "base",
+      }),
+    ).rejects.toThrow("0.02 USDC");
+  });
+});
+
+// ── listIntents (GET /v2/intents/list) ───────────────────────────────────
+
+describe("listIntents", () => {
+  it("sends GET /v2/intents/list with pagination and camelCases the response", async () => {
+    const body = {
+      intents: [
+        {
+          intent_id: "int-1",
+          agent_id: "agent-1",
+          merchant_recipient: "0xabc",
+          sending_amount: "10.00",
+          receiving_amount: "9.80",
+          estimated_fee: "0.20",
+          payer_chain: "base",
+          target_chain: "base",
+          status: IntentStatus.TargetSettled,
+          created_at: "2026-06-20T00:00:00Z",
+          expires_at: "2026-06-20T01:00:00Z",
+        },
+      ],
+      total: 1,
+      page: 2,
+      page_size: 50,
+    };
+
+    const f = mockFetcher(200, body, (req) => {
+      expect(req.url).toBe(
+        "http://localhost/v2/intents/list?page=2&page_size=50",
+      );
+      expect(req.method).toBe("GET");
+      expect(req.headers).toHaveProperty("Authorization");
+    });
+
+    const client = bearerClient(f);
+    const resp = await client.listIntents({ page: 2, pageSize: 50 });
+
+    expect(resp.total).toBe(1);
+    expect(resp.pageSize).toBe(50);
+    expect(resp.intents[0].intentId).toBe("int-1");
+    expect(resp.intents[0].sendingAmount).toBe("10.00");
+  });
+
+  it("omits query string when no pagination params are given", async () => {
+    const f = mockFetcher(200, { intents: [], total: 0, page: 1, page_size: 20 }, (req) => {
+      expect(req.url).toBe("http://localhost/v2/intents/list");
+    });
+
+    const client = bearerClient(f);
+    await client.listIntents();
+  });
+
+  it("throws PayValidationError for a non-positive page", async () => {
+    const client = bearerClient(mockFetcher(200, {}));
+    await expect(client.listIntents({ page: 0 })).rejects.toThrow(
+      PayValidationError,
+    );
+  });
+
+  it("throws PayApiError on non-200", async () => {
+    const client = bearerClient(mockFetcher(500, { message: "boom" }));
+    await expect(client.listIntents()).rejects.toThrow(PayApiError);
+  });
+});
+
+// ── getMe (GET /v2/me) ───────────────────────────────────────────────────
+
+describe("getMe", () => {
+  it("sends GET /v2/me and camelCases the response", async () => {
+    const f = mockFetcher(
+      200,
+      {
+        agent_id: "agent-1",
+        agent_number: "A-0001",
+        name: "My Agent",
+        status: "ACTIVE",
+        wallet_address: "0xabc",
+        solana_wallet_address: "SoLaNa111",
+      },
+      (req) => {
+        expect(req.url).toBe("http://localhost/v2/me");
+        expect(req.method).toBe("GET");
+        expect(req.headers).toHaveProperty("Authorization");
+      },
+    );
+
+    const client = bearerClient(f);
+    const resp = await client.getMe();
+    expect(resp.agentId).toBe("agent-1");
+    expect(resp.agentNumber).toBe("A-0001");
+    expect(resp.walletAddress).toBe("0xabc");
+    expect(resp.solanaWalletAddress).toBe("SoLaNa111");
+  });
+
+  it("throws PayApiError on 401", async () => {
+    const client = bearerClient(mockFetcher(401, { message: "api key required" }));
+    await expect(client.getMe()).rejects.toThrow(PayApiError);
+  });
+});
+
+// ── getSwapApproval (GET /api/swap/approval) ─────────────────────────────
+
+describe("getSwapApproval", () => {
+  const approvalBody = {
+    request_id: "req-1",
+    needs_approval: true,
+    gas_fee: "0.001",
+    approval: {
+      to: "0xtoken",
+      from: "0xowner",
+      data: "0xdeadbeef",
+      value: "0x0",
+      chain_id: 8453,
+      max_fee_per_gas: "0x1",
+    },
+  };
+
+  it("PayClient hits GET /api/swap/approval with snake_case query", async () => {
+    const f = mockFetcher(200, approvalBody, (req) => {
+      expect(req.url).toBe(
+        "http://localhost/api/swap/approval?chain=base&token=0xtoken&amount=1000000&token_out=0xout&user_address=0xowner&include_gas_info=true",
+      );
+      expect(req.method).toBe("GET");
+    });
+
+    const client = bearerClient(f);
+    const resp = await client.getSwapApproval({
+      chain: "base",
+      token: "0xtoken",
+      amount: 1_000_000,
+      tokenOut: "0xout",
+      userAddress: "0xowner",
+      includeGasInfo: true,
+    });
+
+    expect(resp.requestId).toBe("req-1");
+    expect(resp.needsApproval).toBe(true);
+    expect(resp.approval?.chainId).toBe(8453);
+    expect(resp.approval?.maxFeePerGas).toBe("0x1");
+  });
+
+  it("PublicPayClient hits GET /api/swap/approval with no auth header", async () => {
+    const f = mockFetcher(200, approvalBody, (req) => {
+      expect(req.url).toContain("http://localhost/api/swap/approval?");
+      expect(req.headers).not.toHaveProperty("Authorization");
+    });
+
+    const client = publicClient(f);
+    const resp = await client.getSwapApproval({
+      chain: "base",
+      token: "0xtoken",
+      amount: 1_000_000,
+      tokenOut: "0xout",
+      email: "a@b.com",
+    });
+    expect(resp.requestId).toBe("req-1");
+  });
+
+  it("throws PayValidationError when neither userAddress nor email is set", async () => {
+    const client = bearerClient(mockFetcher(200, {}));
+    await expect(
+      client.getSwapApproval({
+        chain: "base",
+        token: "0xtoken",
+        amount: 1_000_000,
+        tokenOut: "0xout",
+      }),
+    ).rejects.toThrow(PayValidationError);
+  });
+
+  it("throws PayValidationError when amount is not a positive integer", async () => {
+    const client = bearerClient(mockFetcher(200, {}));
+    await expect(
+      client.getSwapApproval({
+        chain: "base",
+        token: "0xtoken",
+        amount: 0,
+        tokenOut: "0xout",
+        userAddress: "0xowner",
+      }),
+    ).rejects.toThrow(PayValidationError);
+  });
+});
+
+// ── getSwapStatus (GET /api/swap/status) ─────────────────────────────────
+
+describe("getSwapStatus", () => {
+  const statusBody = {
+    status: "DONE",
+    substatus: "COMPLETED",
+    source_tx_hash: "0xsrc",
+    dest_tx_hash: "0xdst",
+    received_amount: "9.80",
+    explorer_link: "https://lifi/0xsrc",
+  };
+
+  it("PayClient hits GET /api/swap/status with snake_case query", async () => {
+    const f = mockFetcher(200, statusBody, (req) => {
+      expect(req.url).toBe(
+        "http://localhost/api/swap/status?tx_hash=0xsrc&from_chain=base&to_chain=arbitrum",
+      );
+    });
+
+    const client = bearerClient(f);
+    const resp = await client.getSwapStatus({
+      txHash: "0xsrc",
+      fromChain: "base",
+      toChain: "arbitrum",
+    });
+
+    expect(resp.status).toBe("DONE");
+    expect(resp.sourceTxHash).toBe("0xsrc");
+    expect(resp.destTxHash).toBe("0xdst");
+    expect(resp.receivedAmount).toBe("9.80");
+  });
+
+  it("PublicPayClient hits GET /api/swap/status", async () => {
+    const f = mockFetcher(200, statusBody, (req) => {
+      expect(req.url).toBe("http://localhost/api/swap/status?tx_hash=0xsrc");
+      expect(req.headers).not.toHaveProperty("Authorization");
+    });
+
+    const client = publicClient(f);
+    const resp = await client.getSwapStatus({ txHash: "0xsrc" });
+    expect(resp.status).toBe("DONE");
+  });
+
+  it("surfaces 404 as PayApiError while transfer is unindexed", async () => {
+    const client = bearerClient(mockFetcher(404, { message: "transfer not found" }));
+    await expect(client.getSwapStatus({ txHash: "0xsrc" })).rejects.toThrow(
+      PayApiError,
+    );
+  });
+
+  it("throws PayValidationError for empty txHash", async () => {
+    const client = bearerClient(mockFetcher(200, {}));
+    await expect(client.getSwapStatus({ txHash: "" })).rejects.toThrow(
+      PayValidationError,
+    );
+  });
+});
+
+// ── swap quote: email resolution params ──────────────────────────────────
+
+describe("getSwapQuote email params", () => {
+  it("includes email and to_user_email in the query string", async () => {
+    const f = mockFetcher(200, { quote: {} }, (req) => {
+      expect(req.url).toContain("email=payer%40example.com");
+      expect(req.url).toContain("to_user_email=merchant%40example.com");
+    });
+
+    const client = publicClient(f);
+    await client.getSwapQuote({
+      chain: "base",
+      inputToken: "0xin",
+      outputToken: "0xout",
+      fromAmount: 1_000_000,
+      email: "payer@example.com",
+      toUserEmail: "merchant@example.com",
+    });
+  });
+});

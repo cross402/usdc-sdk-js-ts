@@ -4,12 +4,15 @@ import { defaultFetcher, doRequest, type Fetcher, parseError } from './http.js';
 import {
 	createIntentRequestSchema,
 	intentIdSchema,
+	listIntentsParamsSchema,
 	parseOrThrow,
 	payClientOptionsSchema,
 	publicPayClientOptionsSchema,
 	registerSwapIntentSchema,
 	settleProofSchema,
+	swapApprovalParamsSchema,
 	swapQuoteParamsSchema,
+	swapStatusParamsSchema,
 } from './schemas.js';
 import type {
 	CreateIntentRequest,
@@ -18,12 +21,19 @@ import type {
 	ExecuteSwapRequest,
 	ExecuteSwapResponse,
 	GetIntentResponse,
+	ListIntentsParams,
+	ListIntentsResponse,
+	MeResponse,
 	RegisterSwapIntentRequest,
 	RegisterSwapIntentResponse,
 	SubmitProofResponse,
 	SupportedChainsResponse,
+	SwapApprovalParams,
+	SwapApprovalResponse,
 	SwapQuoteParams,
 	SwapQuoteResponse,
+	SwapStatusParams,
+	SwapStatusResponse,
 } from './types.js';
 import { keysToCamel, keysToSnake } from './utils.js';
 
@@ -142,6 +152,42 @@ export class PayClient {
 	}
 
 	/**
+	 * List the authenticated agent's intents, most recent first
+	 * (GET /v2/intents/list).
+	 */
+	async listIntents(
+		params: ListIntentsParams = {},
+		signal?: AbortSignal,
+	): Promise<ListIntentsResponse> {
+		const p = parseOrThrow(listIntentsParamsSchema, params);
+		const qs = new URLSearchParams();
+		if (p.page !== undefined) qs.set('page', String(p.page));
+		if (p.pageSize !== undefined) qs.set('page_size', String(p.pageSize));
+		const query = qs.toString();
+		const resp = await this.do(
+			'GET',
+			`/intents/list${query ? `?${query}` : ''}`,
+			undefined,
+			signal,
+		);
+		if (resp.status !== 200) {
+			throw await parseError(resp);
+		}
+		return keysToCamel(await resp.json()) as ListIntentsResponse;
+	}
+
+	/**
+	 * Get the authenticated agent's identity (GET /v2/me).
+	 */
+	async getMe(signal?: AbortSignal): Promise<MeResponse> {
+		const resp = await this.do('GET', '/me', undefined, signal);
+		if (resp.status !== 200) {
+			throw await parseError(resp);
+		}
+		return keysToCamel(await resp.json()) as MeResponse;
+	}
+
+	/**
 	 * List runtime-enabled payer and target chains (GET /api/chains).
 	 * The route is unauthenticated and shared with PublicPayClient.
 	 */
@@ -187,6 +233,56 @@ export class PayClient {
 			throw await parseError(resp);
 		}
 		return keysToCamel(await resp.json()) as SwapQuoteResponse;
+	}
+
+	/**
+	 * Check whether an ERC-20 approval is needed before a swap (GET /api/swap/approval).
+	 * One of params.userAddress or params.email must be set.
+	 */
+	async getSwapApproval(
+		params: SwapApprovalParams,
+		signal?: AbortSignal,
+	): Promise<SwapApprovalResponse> {
+		const p = parseOrThrow(swapApprovalParamsSchema, params);
+		const qs = buildSwapApprovalQuery(p);
+		const resp = await doRequest({
+			url: this.baseUrl + API_PATH_PREFIX + `/swap/approval?${qs}`,
+			method: 'GET',
+			headers: {},
+			signal,
+			fetcher: this.fetchFn,
+			timeoutMs: this.timeoutMs,
+			hasCustomFetch: this.hasCustomFetch,
+		});
+		if (resp.status !== 200) {
+			throw await parseError(resp);
+		}
+		return keysToCamel(await resp.json()) as SwapApprovalResponse;
+	}
+
+	/**
+	 * Poll cross-chain transfer status by source-chain tx hash (GET /api/swap/status).
+	 * Returns a PayApiError with statusCode 404 until the transfer is indexed.
+	 */
+	async getSwapStatus(
+		params: SwapStatusParams,
+		signal?: AbortSignal,
+	): Promise<SwapStatusResponse> {
+		const p = parseOrThrow(swapStatusParamsSchema, params);
+		const qs = buildSwapStatusQuery(p);
+		const resp = await doRequest({
+			url: this.baseUrl + API_PATH_PREFIX + `/swap/status?${qs}`,
+			method: 'GET',
+			headers: {},
+			signal,
+			fetcher: this.fetchFn,
+			timeoutMs: this.timeoutMs,
+			hasCustomFetch: this.hasCustomFetch,
+		});
+		if (resp.status !== 200) {
+			throw await parseError(resp);
+		}
+		return keysToCamel(await resp.json()) as SwapStatusResponse;
 	}
 
 	/**
@@ -243,7 +339,10 @@ export class PayClient {
 	 * Get supported swap chains from LiFi (GET /api/swap/chains).
 	 * Returns raw LiFi JSON — key casing is not transformed.
 	 */
-	async getSwapChains(chainTypes?: string, signal?: AbortSignal): Promise<unknown> {
+	async getSwapChains(
+		chainTypes?: string,
+		signal?: AbortSignal,
+	): Promise<unknown> {
 		const qs = chainTypes ? `chainTypes=${encodeURIComponent(chainTypes)}` : '';
 		const resp = await doRequest({
 			url: this.baseUrl + API_PATH_PREFIX + `/swap/chains${qs ? `?${qs}` : ''}`,
@@ -273,7 +372,10 @@ export class PayClient {
 	): Promise<unknown> {
 		const qs = buildDiscoveryQuery({ fromChain, toChain, fromToken, toToken });
 		const resp = await doRequest({
-			url: this.baseUrl + API_PATH_PREFIX + `/swap/connections${qs ? `?${qs}` : ''}`,
+			url:
+				this.baseUrl +
+				API_PATH_PREFIX +
+				`/swap/connections${qs ? `?${qs}` : ''}`,
 			method: 'GET',
 			headers: {},
 			signal,
@@ -442,6 +544,45 @@ export class PublicPayClient {
 	}
 
 	/**
+	 * Check whether an ERC-20 approval is needed before a swap (GET /api/swap/approval).
+	 * One of params.userAddress or params.email must be set.
+	 */
+	async getSwapApproval(
+		params: SwapApprovalParams,
+		signal?: AbortSignal,
+	): Promise<SwapApprovalResponse> {
+		const p = parseOrThrow(swapApprovalParamsSchema, params);
+		const qs = buildSwapApprovalQuery(p);
+		const resp = await this.do(
+			'GET',
+			`/swap/approval?${qs}`,
+			undefined,
+			signal,
+		);
+		if (resp.status !== 200) {
+			throw await parseError(resp);
+		}
+		return keysToCamel(await resp.json()) as SwapApprovalResponse;
+	}
+
+	/**
+	 * Poll cross-chain transfer status by source-chain tx hash (GET /api/swap/status).
+	 * Returns a PayApiError with statusCode 404 until the transfer is indexed.
+	 */
+	async getSwapStatus(
+		params: SwapStatusParams,
+		signal?: AbortSignal,
+	): Promise<SwapStatusResponse> {
+		const p = parseOrThrow(swapStatusParamsSchema, params);
+		const qs = buildSwapStatusQuery(p);
+		const resp = await this.do('GET', `/swap/status?${qs}`, undefined, signal);
+		if (resp.status !== 200) {
+			throw await parseError(resp);
+		}
+		return keysToCamel(await resp.json()) as SwapStatusResponse;
+	}
+
+	/**
 	 * Register a submitted swap transaction as a payment intent (POST /api/swap/intents).
 	 * The returned intentId can be used to track settlement status.
 	 */
@@ -450,7 +591,12 @@ export class PublicPayClient {
 		signal?: AbortSignal,
 	): Promise<RegisterSwapIntentResponse> {
 		const req = parseOrThrow(registerSwapIntentSchema, request);
-		const resp = await this.do('POST', '/swap/intents', keysToSnake(req), signal);
+		const resp = await this.do(
+			'POST',
+			'/swap/intents',
+			keysToSnake(req),
+			signal,
+		);
 		if (resp.status !== 201) {
 			throw await parseError(resp);
 		}
@@ -483,7 +629,10 @@ export class PublicPayClient {
 	 * Get supported swap chains from LiFi (GET /api/swap/chains).
 	 * Returns raw LiFi JSON — key casing is not transformed.
 	 */
-	async getSwapChains(chainTypes?: string, signal?: AbortSignal): Promise<unknown> {
+	async getSwapChains(
+		chainTypes?: string,
+		signal?: AbortSignal,
+	): Promise<unknown> {
 		const qs = chainTypes ? `chainTypes=${encodeURIComponent(chainTypes)}` : '';
 		const resp = await this.do(
 			'GET',
@@ -535,10 +684,38 @@ function buildSwapQuoteQuery(p: SwapQuoteParams): string {
 	if (p.toChain) q.set('to_chain', p.toChain);
 	if (p.userAddress) q.set('user_address', p.userAddress);
 	if (p.toUserAddress) q.set('to_user_address', p.toUserAddress);
+	if (p.email) q.set('email', p.email);
+	if (p.toUserEmail) q.set('to_user_email', p.toUserEmail);
 	return q.toString();
 }
 
-function buildDiscoveryQuery(params: Record<string, string | undefined>): string {
+function buildSwapApprovalQuery(p: SwapApprovalParams): string {
+	const q = new URLSearchParams();
+	q.set('chain', p.chain);
+	q.set('token', p.token);
+	q.set('amount', String(p.amount));
+	q.set('token_out', p.tokenOut);
+	if (p.userAddress) q.set('user_address', p.userAddress);
+	if (p.email) q.set('email', p.email);
+	if (p.toChain) q.set('to_chain', p.toChain);
+	if (p.toUserAddress) q.set('to_user_address', p.toUserAddress);
+	if (p.toUserEmail) q.set('to_user_email', p.toUserEmail);
+	if (p.includeGasInfo) q.set('include_gas_info', 'true');
+	return q.toString();
+}
+
+function buildSwapStatusQuery(p: SwapStatusParams): string {
+	const q = new URLSearchParams();
+	q.set('tx_hash', p.txHash);
+	if (p.fromChain) q.set('from_chain', p.fromChain);
+	if (p.toChain) q.set('to_chain', p.toChain);
+	if (p.bridge) q.set('bridge', p.bridge);
+	return q.toString();
+}
+
+function buildDiscoveryQuery(
+	params: Record<string, string | undefined>,
+): string {
 	const q = new URLSearchParams();
 	for (const [k, v] of Object.entries(params)) {
 		if (v) q.set(k, v);

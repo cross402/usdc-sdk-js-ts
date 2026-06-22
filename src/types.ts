@@ -66,11 +66,25 @@ export const IntentStatus = {
 export type IntentStatusValue =
 	(typeof IntentStatus)[keyof typeof IntentStatus];
 
-/** Body for POST /v2/intents. Exactly one of email or recipient must be set. */
+/**
+ * Body for POST /v2/intents (and POST /api/intents).
+ *
+ * Exactly one of `email` or `recipient` must be set, and exactly one of
+ * `amount` (ExactOut) or `toAmount` (ExactIn) must be set.
+ */
 export interface CreateIntentRequest {
 	email?: string;
 	recipient?: string;
-	amount: string;
+	/**
+	 * ExactOut: the amount the recipient receives, in USDC.
+	 * Mutually exclusive with `toAmount`.
+	 */
+	amount?: string;
+	/**
+	 * ExactIn: the amount the payer sends, in their `payerAsset`.
+	 * Mutually exclusive with `amount`.
+	 */
+	toAmount?: string;
 	payerChain: ChainValue | (string & {});
 	/** Target chain for settlement. */
 	targetChain: ChainValue | (string & {});
@@ -78,6 +92,11 @@ export interface CreateIntentRequest {
 	payerAsset?: AssetValue | (string & {});
 	/** Token the recipient receives. Defaults to 'usdc' when omitted. */
 	targetAsset?: AssetValue | (string & {});
+	/**
+	 * Optional payer wallet address, screened advisorily at create time.
+	 * The authoritative payer screen still runs in the async settlement path.
+	 */
+	payerAddress?: string;
 }
 
 /** Fee details from the API. */
@@ -199,6 +218,44 @@ export interface SupportedChainsResponse {
 	targetChains: string[];
 }
 
+/** Response for GET /v2/me (200). Identity of the authenticated agent. */
+export interface MeResponse {
+	agentId: string;
+	agentNumber: string;
+	name: string;
+	status: string;
+	/** EVM wallet address; omitted until the agent wallet is provisioned. */
+	walletAddress?: string;
+	/** Solana wallet address; omitted until the agent wallet is provisioned. */
+	solanaWalletAddress?: string;
+}
+
+/** Pagination parameters for GET /v2/intents/list. */
+export interface ListIntentsParams {
+	/** 1-based page number (default 1). */
+	page?: number;
+	/** Rows per page (default 20, max 100). */
+	pageSize?: number;
+}
+
+/** A single row returned by GET /v2/intents/list. */
+export interface IntentListItem extends IntentBase {
+	sendingAmount: string;
+	receivingAmount: string;
+	estimatedFee: string;
+	feeBreakdown?: FeeBreakdown;
+	payerChain: string;
+	targetChain: string;
+}
+
+/** Response for GET /v2/intents/list (200). */
+export interface ListIntentsResponse {
+	intents: IntentListItem[];
+	total: number;
+	page: number;
+	pageSize: number;
+}
+
 // ── Swap ──────────────────────────────────────────────────────────────────────
 
 /** Status of a registered swap intent job. */
@@ -209,7 +266,8 @@ export const SwapJobStatus = {
 	Canceled: 'CANCELED',
 } as const;
 
-export type SwapJobStatusValue = (typeof SwapJobStatus)[keyof typeof SwapJobStatus];
+export type SwapJobStatusValue =
+	(typeof SwapJobStatus)[keyof typeof SwapJobStatus];
 
 /** Parameters for GET /api/swap/quote. Exactly one of fromAmount or toAmount must be set. */
 export interface SwapQuoteParams {
@@ -231,6 +289,10 @@ export interface SwapQuoteParams {
 	userAddress?: string;
 	/** Destination recipient address. Required for cross-family routes when userAddress is set. */
 	toUserAddress?: string;
+	/** Email to resolve into the source-chain `userAddress`. Ignored when `userAddress` is set. */
+	email?: string;
+	/** Email to resolve into the destination-chain `toUserAddress`. Ignored when `toUserAddress` is set. */
+	toUserEmail?: string;
 }
 
 /** Quote details returned inside SwapQuoteResponse. */
@@ -263,6 +325,81 @@ export interface SwapTransaction {
 export interface SwapQuoteResponse {
 	quote: SwapQuoteData;
 	swapTransaction?: SwapTransaction;
+}
+
+/** Parameters for GET /api/swap/approval. One of userAddress or email is required. */
+export interface SwapApprovalParams {
+	/** Source chain identifier (e.g. 'base', 'bsc'). */
+	chain: string;
+	/** Token contract address that needs the ERC-20 allowance. */
+	token: string;
+	/** Amount to approve, in the token's smallest unit. */
+	amount: number;
+	/** Token being swapped to (spender depends on the route). */
+	tokenOut: string;
+	/** Owner wallet address. Required unless `email` is supplied. */
+	userAddress?: string;
+	/** Email to resolve into `userAddress`. Ignored when `userAddress` is set. */
+	email?: string;
+	/** Destination chain. Omit or leave empty for same-chain swap. */
+	toChain?: string;
+	/** Destination recipient address (cross-family routes). */
+	toUserAddress?: string;
+	/** Email to resolve into `toUserAddress`. Ignored when `toUserAddress` is set. */
+	toUserEmail?: string;
+	/** When true, the response includes gas-fee estimates. */
+	includeGasInfo?: boolean;
+}
+
+/** An approval (or allowance-reset) transaction for the caller to sign. */
+export interface SwapApprovalTransaction {
+	to: string;
+	from: string;
+	data: string;
+	value: string;
+	chainId: number;
+	gasLimit?: string;
+	maxFeePerGas?: string;
+	maxPriorityFeePerGas?: string;
+	gasPrice?: string;
+}
+
+/** Response for GET /api/swap/approval (200). */
+export interface SwapApprovalResponse {
+	requestId: string;
+	/** The approval transaction to sign; omitted when no approval is needed. */
+	approval?: SwapApprovalTransaction;
+	/** Allowance-reset transaction to send first (e.g. USDT); omitted when not required. */
+	cancel?: SwapApprovalTransaction;
+	/** Estimated gas fee for the approval; present only when includeGasInfo was set. */
+	gasFee?: string;
+	/** Estimated gas fee for the reset tx; present only when includeGasInfo was set. */
+	cancelGasFee?: string;
+	needsApproval: boolean;
+}
+
+/** Parameters for GET /api/swap/status. */
+export interface SwapStatusParams {
+	/** Source-chain transaction hash to track. */
+	txHash: string;
+	/** Source chain hint; improves lookup for cross-chain transfers. */
+	fromChain?: string;
+	/** Destination chain hint; improves lookup for cross-chain transfers. */
+	toChain?: string;
+	/** Bridge/tool hint. */
+	bridge?: string;
+}
+
+/** Response for GET /api/swap/status (200). Cross-chain transfer status. */
+export interface SwapStatusResponse {
+	status: string;
+	substatus?: string;
+	message?: string;
+	tool?: string;
+	sourceTxHash?: string;
+	destTxHash?: string;
+	receivedAmount?: string;
+	explorerLink?: string;
 }
 
 /** Request body for POST /api/swap/intents. All fields are required. */
